@@ -46,17 +46,19 @@ bool FaceDetector::load(const string& modelDir) {
 }
 
 void FaceDetector::detect(const Mat& image, vector<Rect>& objects) {
-    int64 start = getTickCount();
-
     Mat rgbImage;
     Mat blob;
     vector<Mat> outs;
 
+    int64 start = getTickCount();
     resize(image, rgbImage, Size(300, 300));
     cvtColor(rgbImage, rgbImage, COLOR_RGBA2BGR);
     dnn::blobFromImage(rgbImage, blob, 1.0, Size(300, 300), Scalar(104.0,177.0,123.0));
     mFaceNet.setInput(blob);
     mFaceNet.forward(outs, getOutputsNames(mFaceNet));
+
+    double duration = 1000*double(getTickCount() - start)/getTickFrequency();
+    LOGI("detect face: total=%d, accepted=%d, duration=%.1fms", outs[0].total(), objects.size(), duration);
 
     // NOTES:
     // Network produces output blob with a shape 1x1xNx7 where N is a number of
@@ -98,8 +100,7 @@ void FaceDetector::detect(const Mat& image, vector<Rect>& objects) {
         LOGI("detect face=[%d,%d,%d,%d] confidence=%.1f", box.x, box.y, box.x + box.width, box.y + box.height, confidence);
     }
 
-    double duration = 1000*double(getTickCount() - start)/getTickFrequency();
-    LOGI("detect face: total=%d, accepted=%d, duration=%.1fms", outs[0].total(), objects.size(), duration);
+
 }
 
 bool FaceDetector::fit(const Mat& image, const Rect& face, vector<Point2f>& landmarks) {
