@@ -10,7 +10,7 @@ extern "C" {
 //
 // com.hangsheng,face.FaceDetector
 //
-JNIEXPORT jlong JNICALL Java_com_hangsheng_face_FaceDetector_nativeCreate(JNIEnv* env, jclass cls, jstring model);
+JNIEXPORT jlong JNICALL Java_com_hangsheng_face_FaceDetector_nativeCreate(JNIEnv* env, jclass cls, jstring modelDir);
 JNIEXPORT void JNICALL Java_com_hangsheng_face_FaceDetector_nativeDestroy(JNIEnv* env, jclass cls, jlong handle);
 JNIEXPORT jobjectArray JNICALL Java_com_hangsheng_face_FaceDetector_nativeDetect(JNIEnv *env, jclass cls,
     jlong handle, jobject byteBuffer, jint width, jint height, jint stride);

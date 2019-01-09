@@ -18,14 +18,14 @@ using namespace cv;
 //
 // com.hangsheng,face.FaceDetector
 //
-JNIEXPORT jlong JNICALL Java_com_hangsheng_face_FaceDetector_nativeCreate(JNIEnv* env, jclass cls, jstring model) {
-    const char* modelFile = env->GetStringUTFChars(model, nullptr);
+JNIEXPORT jlong JNICALL Java_com_hangsheng_face_FaceDetector_nativeCreate(JNIEnv* env, jclass cls, jstring modelDir) {
+    const char* dir = env->GetStringUTFChars(modelDir, nullptr);
     FaceDetector* faceDetector = new FaceDetector();
-    if (!faceDetector->load(modelFile)) {
+    if (!faceDetector->load(dir)) {
         delete faceDetector;
         faceDetector = nullptr;
     }
-    env->ReleaseStringUTFChars(model, modelFile);
+    env->ReleaseStringUTFChars(modelDir, dir);
     return reinterpret_cast<jlong>(faceDetector);
 }
 

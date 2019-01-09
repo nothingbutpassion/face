@@ -26,7 +26,7 @@ public class FaceDetector {
 
 
     public boolean open() {
-        mNativeHandle = nativeCreate(Environment.getExternalStorageDirectory() + "/Face/haarcascade_frontalface_default.xml");
+        mNativeHandle = nativeCreate(Environment.getExternalStorageDirectory() + "/Face");
         return (mNativeHandle != 0);
     }
 
@@ -68,7 +68,7 @@ public class FaceDetector {
     }
 
     // Create native face detector
-    private static native long nativeCreate(String modelFile) ;
+    private static native long nativeCreate(String modelDir) ;
 
     // Destroy native face detector
     private static native void nativeDestroy(long nativeHandle);

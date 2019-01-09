@@ -277,9 +277,9 @@ public class MainActivity extends Activity {
 
     public static boolean copyFiles(Context context) {
         String[] assetFiles = new String[] {
-                "haarcascade_frontalface_default.xml",
-                "haarcascade_eye.xml",
-                "lbfmodel.yaml"
+                "lbfmodel.yaml",
+                "res10_300x300_ssd_iter_140000.prototxt",
+                "res10_300x300_ssd_iter_140000.caffemodel"
         };
         boolean result = true;
         for(String file: assetFiles) {

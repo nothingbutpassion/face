@@ -39,8 +39,7 @@ android {
             //jniLibs.srcDirs 'D:/share/opencv_for_android_x86_64/sdk/native/libs'
         }
     }
-
-    }
+}
 
 dependencies {
     implementation fileTree(dir: 'libs', include: ['*.jar'])

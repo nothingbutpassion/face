@@ -3,19 +3,17 @@
 
 #include <string>
 #include <vector>
-#include <opencv2/objdetect.hpp>
-#include <opencv2/face.hpp>
+#include <opencv2/dnn.hpp>
 #include "face_landmark.h"
 
 class FaceDetector {
 public:
-    bool load(const std::string& modelFile);
+    bool load(const std::string& modelDir);
     void detect(const cv::Mat& image, std::vector<cv::Rect>& objects);
     bool fit(const cv::Mat& image, const cv::Rect& face, std::vector<cv::Point2f>& landmarks);
 private:
-    cv::CascadeClassifier mFaceClassifier;
-    cv::CascadeClassifier mEyeClassifier;
     FaceLandmark mFaceLandmark;
+    cv::dnn::Net mFaceNet;
 
 };
 
