@@ -36,17 +36,13 @@ public class FaceDetector {
         }
     }
 
-    public Rect[] detect(Image image) {
-        Rect[] objectRects = new Rect[0];
-        if (mNativeHandle != 0 && image.getFormat() == PixelFormat.RGBA_8888) {
-            Image.Plane plane = image.getPlanes()[0];
-            ByteBuffer byteBuffer = plane.getBuffer();
-            int stride = plane.getRowStride();
-            int width = image.getWidth();
-            int height = image.getHeight();
-            objectRects = nativeDetect(mNativeHandle, byteBuffer, width, height, stride);
+    public boolean process(NativeBuffer nativeBuffer) {
+        if (mNativeHandle == 0 || nativeBuffer.getFormat() != PixelFormat.RGBA_8888) {
+            return false;
         }
-        return objectRects;
+       nativeProcess(mNativeHandle,  nativeBuffer.getByteBuffer(),
+               nativeBuffer.getWidth(), nativeBuffer.getHeight(), nativeBuffer.getStride());
+        return true;
     }
 
     public Rect[] findFaces(NativeBuffer nativeBuffer) {
@@ -78,5 +74,8 @@ public class FaceDetector {
 
     // Face marks for RGBA_8888 image
     private static native PointF[] nativeGetMarks(long nativeHandle, ByteBuffer byteBuffer, int width, int height, int stride, Rect roi);
+
+    // Process all face related stuff
+    private static native void nativeProcess(long nativeHandle, ByteBuffer byteBuffer, int width, int height, int stride);
 
 }

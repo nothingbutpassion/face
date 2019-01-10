@@ -84,30 +84,30 @@ public class MainActivity extends Activity {
 
         setContentView(R.layout.activity_main);
         mTextView = (TextView) findViewById(R.id.status_text);
-        mHandler = new Handler() {
-            @Override
-            public void handleMessage(Message msg) {
-                if (msg.what == MESSAGE_FACE_DETECTED) {
-                    int bufWidth = msg.arg1;
-                    int bufHeight = msg.arg2;
-                    float ration = mPreviewHeight/(float)bufHeight;
-                    if (ration*bufWidth > mPreviewWidth) {
-                        ration = mPreviewWidth/(float)bufWidth;
-                    }
-                    Rect[] rects = (Rect[]) msg.obj;
-                    String text = "Face detected:";
-                    for (Rect r: rects) {
-                        text += "\n[" + (int)ration * r.left + ", " + (int)ration * r.top + ", "
-                                      + (int)ration * r.right + ", " + (int)ration* r.bottom + "]";
-                    }
-                    mStatus = text;
-                } else {
-                    mStatus = "Face detecting ...";
-                }
-                mTextView.setText(mStatus);
-                super.handleMessage(msg);
-            }
-        };
+//        mHandler = new Handler() {
+//            @Override
+//            public void handleMessage(Message msg) {
+//                if (msg.what == MESSAGE_FACE_DETECTED) {
+//                    int bufWidth = msg.arg1;
+//                    int bufHeight = msg.arg2;
+//                    float ration = mPreviewHeight/(float)bufHeight;
+//                    if (ration*bufWidth > mPreviewWidth) {
+//                        ration = mPreviewWidth/(float)bufWidth;
+//                    }
+//                    Rect[] rects = (Rect[]) msg.obj;
+//                    String text = "Face detected:";
+//                    for (Rect r: rects) {
+//                        text += "\n[" + (int)ration * r.left + ", " + (int)ration * r.top + ", "
+//                                      + (int)ration * r.right + ", " + (int)ration* r.bottom + "]";
+//                    }
+//                    mStatus = text;
+//                } else {
+//                    mStatus = "Face detecting ...";
+//                }
+//                mTextView.setText(mStatus);
+//                super.handleMessage(msg);
+//            }
+//        };
 
         SurfaceView surfaceView = ((SurfaceView) findViewById(R.id.camera_view));
         surfaceView.setOnClickListener(new View.OnClickListener() {
@@ -150,43 +150,48 @@ public class MainActivity extends Activity {
         mVideoCapture.setCaptureListener(new VideoCapture.CaptureListener() {
             @Override
             public void onCaptured(Image image) {
-                Log.d(TAG, "captured image: size=" + image.getWidth() + "x" + image.getHeight() + " format=" + image.getFormat());
-
                 long t0 = System.currentTimeMillis();
+                Log.d(TAG, "captured image: size=" + image.getWidth() + "x" + image.getHeight() + " format=" + image.getFormat());
 
                 // Draw surface
                 if (mPreviewSurface != null) {
-                    NativeBuffer nativeBuffer = new NativeBuffer(image);
-
                     long t1 = System.currentTimeMillis();
-                    nativeBuffer = nativeBuffer.rotate(mVideoCapture.getCaptureRotation());
-                    Log.i(TAG, "NativeBuffer.rotate: " + ( System.currentTimeMillis() - t1) + "ms");
+                    NativeBuffer nativeBuffer = new NativeBuffer(image);
+                    Log.i(TAG, "NativeBuffer.<init>: " + ( System.currentTimeMillis() - t1) + "ms");
 
                     long t2 = System.currentTimeMillis();
+                    nativeBuffer = nativeBuffer.rotate(mVideoCapture.getCaptureRotation());
+                    Log.i(TAG, "NativeBuffer.rotate: " + ( System.currentTimeMillis() - t2) + "ms");
+
+                    long t3 = System.currentTimeMillis();
                     nativeBuffer = nativeBuffer.flip(mVideoCapture.getCaptureFlipping());
-                    Log.i(TAG, "NativeBuffer.flip: " + ( System.currentTimeMillis() - t2) + "ms");
+                    Log.i(TAG, "NativeBuffer.flip: " + ( System.currentTimeMillis() - t3) + "ms");
 
                     // Face detection;
-                    long t3 = System.currentTimeMillis();
-                    Rect[] faces = mFaceDetector.findFaces(nativeBuffer);
-                    Log.i(TAG, "FaceDetector.detect: " + ( System.currentTimeMillis() - t3) + "ms");
+                    long t4 = System.currentTimeMillis();
+                    mFaceDetector.process(nativeBuffer);
+                    Log.i(TAG, "FaceDetector.process: " + ( System.currentTimeMillis() - t4) + "ms");
 
-                    if (faces.length > 0) {
-                        Message message = Message.obtain();
-                        message.what = MESSAGE_FACE_DETECTED;
-                        message.obj = faces;
-                        message.arg1 = nativeBuffer.getWidth();
-                        message.arg2 = nativeBuffer.getHeight();
-                        mHandler.sendMessage(message);
-                    } else if (mStatus != "") {
-                        mHandler.sendEmptyMessage(0);
-                    }
-
-                    for (int i=0; i < faces.length; ++i) {
-                        long t4 = System.currentTimeMillis();
-                        PointF[] faceMarks = mFaceDetector.getMarks(nativeBuffer, faces[i]);
-                        Log.i(TAG, "FaceDetector.getMarks: " + ( System.currentTimeMillis() - t4) + "ms");
-                    }
+//                    long t3 = System.currentTimeMillis();
+//                    Rect[] faces = mFaceDetector.findFaces(nativeBuffer);
+//                    Log.i(TAG, "FaceDetector.detect: " + ( System.currentTimeMillis() - t3) + "ms");
+//
+//                    if (faces.length > 0) {
+//                        Message message = Message.obtain();
+//                        message.what = MESSAGE_FACE_DETECTED;
+//                        message.obj = faces;
+//                        message.arg1 = nativeBuffer.getWidth();
+//                        message.arg2 = nativeBuffer.getHeight();
+//                        mHandler.sendMessage(message);
+//                    } else if (mStatus != "") {
+//                        mHandler.sendEmptyMessage(0);
+//                    }
+//
+//                    for (int i=0; i < faces.length; ++i) {
+//                        long t4 = System.currentTimeMillis();
+//                        PointF[] faceMarks = mFaceDetector.getMarks(nativeBuffer, faces[i]);
+//                        Log.i(TAG, "FaceDetector.getMarks: " + ( System.currentTimeMillis() - t4) + "ms");
+//                    }
 
                     long t5 = System.currentTimeMillis();
                     nativeBuffer.draw(mPreviewSurface);

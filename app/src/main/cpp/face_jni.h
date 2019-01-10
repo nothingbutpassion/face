@@ -16,6 +16,9 @@ JNIEXPORT jobjectArray JNICALL Java_com_hangsheng_face_FaceDetector_nativeDetect
     jlong handle, jobject byteBuffer, jint width, jint height, jint stride);
 JNIEXPORT jobjectArray JNICALL Java_com_hangsheng_face_FaceDetector_nativeGetMarks(JNIEnv *env, jclass cls,
     jlong handle, jobject byteBuffer, jint width, jint height, jint stride, jobject roi);
+// Process all face-related stuff
+JNIEXPORT void JNICALL Java_com_hangsheng_face_FaceDetector_nativeProcess(JNIEnv *env, jclass cls,
+    jlong handle, jobject byteBuffer, jint width, jint height, jint stride);
 //
 // com.hangsheng,face.NativeBuffer
 //

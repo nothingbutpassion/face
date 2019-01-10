@@ -50,23 +50,17 @@ void FaceDetector::detect(const Mat& image, vector<Rect>& objects) {
     Mat blob;
     vector<Mat> outs;
 
-    int64 start = getTickCount();
-    resize(image, rgbImage, Size(300, 300));
-    cvtColor(rgbImage, rgbImage, COLOR_RGBA2BGR);
+    cvtColor(image, rgbImage, COLOR_RGBA2BGR);
     dnn::blobFromImage(rgbImage, blob, 1.0, Size(300, 300), Scalar(104.0,177.0,123.0));
     mFaceNet.setInput(blob);
     mFaceNet.forward(outs, getOutputsNames(mFaceNet));
-
-    double duration = 1000*double(getTickCount() - start)/getTickFrequency();
-    LOGI("detect face: total=%d, accepted=%d, duration=%.1fms", outs[0].total(), objects.size(), duration);
 
     // NOTES:
     // Network produces output blob with a shape 1x1xNx7 where N is a number of
     // detections and an every detection is a vector of values
     // [batchId, classId, confidence, left, top, right, bottom]
-    CV_Assert(outs.size() == 1);
+    // CV_Assert(outs.size() == 1);
     constexpr float confidenceThreshold = 0.5f;
-    constexpr float nmsThreshold = 0.4f;
     vector<Rect> bboxes;
     vector<float> confidences;
     float* data = (float*)outs[0].data;
@@ -82,25 +76,19 @@ void FaceDetector::detect(const Mat& image, vector<Rect>& objects) {
             int height = bottom - top + 1;
             if (0 < left && left < image.cols && 0 < top && top < image.rows &&
                 left < right && right < image.cols &&
-                top < bottom && bottom < image.rows &&
-                width < image.cols && height < image.rows) {
-                confidences.push_back(confidence);
+                top < bottom && bottom < image.rows) {
                 bboxes.push_back(Rect(left, top, width, height));
+                confidences.push_back(confidence);
             }
         }
     }
-
+    // Performs non maximum suppression given boxes and corresponding scores
+    constexpr float nmsThreshold = 0.4f;
     vector<int> indices;
     dnn::NMSBoxes(bboxes, confidences, confidenceThreshold, nmsThreshold, indices);
     for (int index: indices) {
-        Rect box = bboxes[index];
-        float confidence = confidences[index];
-        objects.push_back(box);
-        drawDetection(image, confidence, box.x, box.y, box.x + box.width, box.y + box.height);
-        LOGI("detect face=[%d,%d,%d,%d] confidence=%.1f", box.x, box.y, box.x + box.width, box.y + box.height, confidence);
+        objects.push_back(bboxes[index]);
     }
-
-
 }
 
 bool FaceDetector::fit(const Mat& image, const Rect& face, vector<Point2f>& landmarks) {
@@ -111,4 +99,57 @@ bool FaceDetector::fit(const Mat& image, const Rect& face, vector<Point2f>& land
     }
     landmarks = std::move(marks[0]);
     return true;
+}
+
+void FaceDetector::process(cv::Mat& image) {
+    int64 t = getTickCount();
+
+    Mat rgbImage;
+    Mat blob;
+    vector<Mat> outs;
+    cvtColor(image, rgbImage, COLOR_RGBA2BGR);
+    dnn::blobFromImage(rgbImage, blob, 1.0, Size(300, 300), Scalar(104.0,177.0,123.0));
+    mFaceNet.setInput(blob);
+    mFaceNet.forward(outs, getOutputsNames(mFaceNet));
+
+    // NOTES:
+    // Network produces output blob with a shape 1x1xNx7 where N is a number of
+    // detections and an every detection is a vector of values
+    // [batchId, classId, confidence, left, top, right, bottom]
+    // CV_Assert(outs.size() == 1);
+    constexpr float confidenceThreshold = 0.5f;
+    vector<Rect> bboxes;
+    vector<float> confidences;
+    float* data = (float*)outs[0].data;
+    for (size_t i = 0; i < outs[0].total(); i += 7)  {
+        // int classId = int(data[i + 1]);
+        float confidence = data[i + 2];
+        if (confidence > confidenceThreshold) {
+            int left = (int)(data[i + 3] * image.cols);
+            int top = (int)(data[i + 4] * image.rows);
+            int right = (int)(data[i + 5] * image.cols);
+            int bottom = (int)(data[i + 6] * image.rows);
+            int width = right - left + 1;
+            int height = bottom - top + 1;
+            if (0 < left && left < image.cols && 0 < top && top < image.rows &&
+                left < right && right < image.cols &&
+                top < bottom && bottom < image.rows) {
+                bboxes.push_back(Rect(left, top, width, height));
+                confidences.push_back(confidence);
+            }
+        }
+    }
+    // Performs non maximum suppression given boxes and corresponding scores
+    constexpr float nmsThreshold = 0.4f;
+    vector<int> indices;
+    dnn::NMSBoxes(bboxes, confidences, confidenceThreshold, nmsThreshold, indices);
+
+    LOGI("detect face: candidates=%d, passed=%d, duration=%.1fms",
+         outs[0].total(), indices.size(), 1000.0*(getTickCount() - t)/getTickFrequency());
+    for (int index: indices) {
+        Rect box = bboxes[index];
+        float confidence = confidences[index];
+        drawDetection(image, confidence, box.x, box.y, box.x + box.width, box.y + box.height);
+        LOGI("detect face: bbox=[%d,%d,%d,%d] confidence=%.1f", box.x, box.y, box.x + box.width, box.y + box.height, confidence);
+    }
 }

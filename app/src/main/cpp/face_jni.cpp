@@ -56,6 +56,20 @@ JNIEXPORT jobjectArray JNICALL Java_com_hangsheng_face_FaceDetector_nativeGetMar
     faceDetector->fit(image, face, landmarks);
     return newPointFArray(landmarks);
 }
+//
+// Process all face-related stuff
+//
+JNIEXPORT void JNICALL Java_com_hangsheng_face_FaceDetector_nativeProcess(JNIEnv *env, jclass cls,
+    jlong handle, jobject byteBuffer, jint width, jint height, jint stride) {
+
+    // The external data is not automatically de-allocated
+    Mat image(height, width, CV_8UC4, env->GetDirectBufferAddress(byteBuffer), stride);
+
+    // Process all face-related stuff
+    FaceDetector* faceDetector = reinterpret_cast<FaceDetector*>(handle);
+    faceDetector->process(image);
+
+}
 
 //
 // com.hangsheng,face.NativeBuffer
