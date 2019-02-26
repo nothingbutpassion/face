@@ -6,6 +6,7 @@
 
 #include <opencv2/core.hpp>
 #include <opencv2/imgproc.hpp>
+#include <opencv2/imgcodecs.hpp>
 
 #include "utils.h"
 #include "face_detector.h"
@@ -141,5 +142,12 @@ JNIEXPORT void JNICALL Java_com_hangsheng_face_NativeBuffer_nativeRotate(JNIEnv*
         Mat dst(srcHeight, srcWidth, CV_8UC4, env->GetDirectBufferAddress(dstBuffer), dstStride);
         src.copyTo(dst);
     }
+}
 
+JNIEXPORT void JNICALL Java_com_hangsheng_face_NativeBuffer_nativeDecode(JNIEnv* env, jclass cls,
+        jobject srcBuffer, jint srcSize, jobject dstBuffer, jint dstWidth, jint dstHeight, jint dstStride) {
+    Mat src(1, srcSize, CV_8UC1, env->GetDirectBufferAddress(srcBuffer), srcSize);
+    Mat dst(dstHeight, dstWidth, CV_8UC4, env->GetDirectBufferAddress(dstBuffer), dstStride);
+    Mat img = imdecode(src, IMREAD_COLOR);
+    cvtColor(img, dst, COLOR_BGR2RGBA);
 }

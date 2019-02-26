@@ -99,78 +99,56 @@ public class MainActivity extends Activity {
                 mFaceDetector = new FaceDetector();
                 mFaceDetector.open();
                 mVideoCapture = new VideoCapture(MainActivity.this);
+                //mVideoCapture.setPreviewSurface(mPreviewSurface);
                 mVideoCapture.setCaptureImage(640, 480, PixelFormat.RGBA_8888);
                 mVideoCapture.setCaptureListener(new VideoCapture.CaptureListener() {
                     @Override
                     public void onCaptured(Image image) {
-                        int format = image.getFormat();
-                        if (format == ImageFormat.JPEG) {
-                            // Consider use opencv imdecode to decode JPEG buffer
-                            ByteBuffer buffer = image.getPlanes()[0].getBuffer();
-                            int remaining = buffer.remaining();
-                            Log.d(TAG, "captured image: size=" + image.getWidth() + "x" + image.getHeight()
-                                    + " format=" + image.getFormat() + " bytes=" + remaining);
-                            byte[] data = new byte[remaining];
-                            buffer.get(data);
-                            Bitmap bitmap = BitmapFactory.decodeByteArray(data, 0, data.length);
-                            Log.d(TAG, "decoded bitmap: size=" + bitmap.getWidth() + "x" + bitmap.getHeight() + " config=" + bitmap.getConfig());
-                            // Draw surface
-                            if (mPreviewSurface != null) {
-                                Canvas canvas = mPreviewSurface.lockCanvas(null);
-                                Matrix matrix = mVideoCapture.getCaptureTransform(bitmap.getWidth(), bitmap.getHeight(), canvas.getWidth(), canvas.getHeight());
-                                canvas.drawBitmap(bitmap, matrix, null);
-                                mPreviewSurface.unlockCanvasAndPost(canvas);
-                            }
-                        } else if (format == PixelFormat.RGBA_8888) {
+//                        int format = image.getFormat();
+//                        if (format == ImageFormat.JPEG) {
+//                            // Consider use opencv imdecode to decode JPEG buffer
+//                            ByteBuffer buffer = image.getPlanes()[0].getBuffer();
+//                            int remaining = buffer.remaining();
+//                            Log.d(TAG, "captured image: size=" + image.getWidth() + "x" + image.getHeight()
+//                                    + " format=" + image.getFormat() + " bytes=" + remaining);
+//                            byte[] data = new byte[remaining];
+//                            buffer.get(data);
+//                            Bitmap bitmap = BitmapFactory.decodeByteArray(data, 0, data.length);
+//                            Log.d(TAG, "decoded bitmap: size=" + bitmap.getWidth() + "x" + bitmap.getHeight() + " config=" + bitmap.getConfig());
+//                            // Draw surface
+//                            if (mPreviewSurface != null) {
+//                                Canvas canvas = mPreviewSurface.lockCanvas(null);
+//                                Matrix matrix = mVideoCapture.getCaptureTransform(bitmap.getWidth(), bitmap.getHeight(), canvas.getWidth(), canvas.getHeight());
+//                                canvas.drawBitmap(bitmap, matrix, null);
+//                                mPreviewSurface.unlockCanvasAndPost(canvas);
+//                            }
+//                        } else if (format == PixelFormat.RGBA_8888) {
                             long t0 = System.currentTimeMillis();
                             // Draw surface
                             if (mPreviewSurface != null) {
                                 long t1 = System.currentTimeMillis();
-                                NativeBuffer nativeBuffer = new NativeBuffer(image);
-                                Log.i(TAG, "NativeBuffer.<init>: " + ( System.currentTimeMillis() - t1) + "ms");
+                                NativeBuffer nativeBuffer = NativeBuffer.from(image);
+                                Log.i(TAG, "NativeBuffer.<init>: " + (System.currentTimeMillis() - t1) + "ms");
 
                                 long t2 = System.currentTimeMillis();
                                 nativeBuffer = nativeBuffer.rotate(mVideoCapture.getCaptureRotation());
-                                Log.i(TAG, "NativeBuffer.rotate: " + ( System.currentTimeMillis() - t2) + "ms");
+                                Log.i(TAG, "NativeBuffer.rotate: " + (System.currentTimeMillis() - t2) + "ms");
 
                                 long t3 = System.currentTimeMillis();
                                 nativeBuffer = nativeBuffer.flip(mVideoCapture.getCaptureFlipping());
-                                Log.i(TAG, "NativeBuffer.flip: " + ( System.currentTimeMillis() - t3) + "ms");
+                                Log.i(TAG, "NativeBuffer.flip: " + (System.currentTimeMillis() - t3) + "ms");
 
                                 // Face detection;
                                 long t4 = System.currentTimeMillis();
-                                mFaceDetector.process(nativeBuffer);
-                                Log.i(TAG, "FaceDetector.process: " + ( System.currentTimeMillis() - t4) + "ms");
+                                //mFaceDetector.process(nativeBuffer);
+                                Log.i(TAG, "FaceDetector.process: " + (System.currentTimeMillis() - t4) + "ms");
 
                                 long t5 = System.currentTimeMillis();
                                 nativeBuffer.draw(mPreviewSurface);
-                                Log.i(TAG, "NativeBuffer.draw: " + ( System.currentTimeMillis() - t5) + "ms");
+                                Log.i(TAG, "NativeBuffer.draw: " + (System.currentTimeMillis() - t5) + "ms");
                             }
-                            Log.i(TAG, "VideoCapture.onCaptured: " + ( System.currentTimeMillis() - t0) + "ms");
-                            if (mPreviewSurface != null) {
-                                long t1 = System.currentTimeMillis();
-                                NativeBuffer nativeBuffer = new NativeBuffer(image);
-                                Log.i(TAG, "NativeBuffer.<init>: " + ( System.currentTimeMillis() - t1) + "ms");
-
-                                long t2 = System.currentTimeMillis();
-                                nativeBuffer = nativeBuffer.rotate(mVideoCapture.getCaptureRotation());
-                                Log.i(TAG, "NativeBuffer.rotate: " + ( System.currentTimeMillis() - t2) + "ms");
-
-                                long t3 = System.currentTimeMillis();
-                                nativeBuffer = nativeBuffer.flip(mVideoCapture.getCaptureFlipping());
-                                Log.i(TAG, "NativeBuffer.flip: " + ( System.currentTimeMillis() - t3) + "ms");
-
-                                // Face detection;
-                                long t4 = System.currentTimeMillis();
-                                mFaceDetector.process(nativeBuffer);
-                                Log.i(TAG, "FaceDetector.process: " + ( System.currentTimeMillis() - t4) + "ms");
-
-                                long t5 = System.currentTimeMillis();
-                                nativeBuffer.draw(mPreviewSurface);
-                                Log.i(TAG, "NativeBuffer.draw: " + ( System.currentTimeMillis() - t5) + "ms");
-                            }
-                            Log.i(TAG, "VideoCapture.onCaptured: " + ( System.currentTimeMillis() - t0) + "ms");
-                        }
+                            Log.i(TAG, "VideoCapture.onCaptured: " + (System.currentTimeMillis() - t0) + "ms");
+//                        }
                     }
                 });
                 mVideoCapture.open();

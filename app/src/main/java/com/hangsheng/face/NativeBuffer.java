@@ -1,5 +1,6 @@
 package com.hangsheng.face;
 
+import android.graphics.ImageFormat;
 import android.graphics.PixelFormat;
 import android.media.Image;
 import android.view.Surface;
@@ -11,29 +12,34 @@ public class NativeBuffer {
     private int mHeight;
     private int mFormat;
     private int mStride;
-    private int mOffset;
     private ByteBuffer mByteBuffer;
 
-    public NativeBuffer(Image image) {
-        mWidth = image.getWidth();
-        mHeight = image.getHeight();
-        mFormat = image.getFormat();
-        mStride = image.getPlanes()[0].getRowStride();
-        mByteBuffer = image.getPlanes()[0].getBuffer();
-        mOffset = 0;
+    public static NativeBuffer from(Image image) {
+        // NOTES:
+        // Currently, only RGBA and JPEG are supported.
+        int width = image.getWidth();
+        int height = image.getHeight();
+        int format = image.getFormat();
+        ByteBuffer byteBuffer = image.getPlanes()[0].getBuffer();
+        if (format == PixelFormat.RGBA_8888) {
+            int stride = image.getPlanes()[0].getRowStride();
+            return new NativeBuffer(byteBuffer, width, height, format, stride);
+        }
+        if (format == ImageFormat.JPEG) {
+            ByteBuffer outBuffer = ByteBuffer.allocateDirect(width*height*4);
+            nativeDecode(byteBuffer, byteBuffer.remaining(), outBuffer, width, height, width*4);
+            return new NativeBuffer(outBuffer, width, height, PixelFormat.RGBA_8888, width*4);
+        }
+        return null;
     }
 
-    public NativeBuffer(ByteBuffer byteBuffer, int width, int height, int format, int stride, int offset) {
+
+    public NativeBuffer(ByteBuffer byteBuffer, int width, int height, int format, int stride) {
         mByteBuffer = byteBuffer;
         mWidth = width;
         mHeight = height;
         mFormat = format;
         mStride = stride;
-        mOffset = offset;
-    }
-
-    public NativeBuffer(ByteBuffer byteBuffer, int width, int height, int format, int stride) {
-        this(byteBuffer, width, height, format, stride, 0);
     }
 
     public ByteBuffer getByteBuffer() {
@@ -51,10 +57,6 @@ public class NativeBuffer {
     public int getStride() {
         return mStride;
     }
-    public int getOffset() {
-        return mOffset;
-    }
-
 
     public void draw(Surface outoput) {
         if (mFormat == PixelFormat.RGBA_8888) {
@@ -95,4 +97,6 @@ public class NativeBuffer {
                                           ByteBuffer dstBuffer, int dstStride, int flipCode);
     private static native void nativeRotate(ByteBuffer srcBuffer, int srcWidth, int srcHeight, int srcStride,
                                           ByteBuffer dstBuffer, int dstStride, int rotateCode);
+
+    private static native void nativeDecode(ByteBuffer srcBuffer, int srcSize, ByteBuffer dstBuffer, int dstWidth, int dstHeight, int dstStride);
 }

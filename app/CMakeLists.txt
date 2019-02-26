@@ -34,7 +34,7 @@ cmake_minimum_required(VERSION 3.4.1)
 # See .externalNativeBuild/cmake/<debug or release>/<abi>/cmake_build_command.txt
 set(OPENCV_INC_DIR "D:/share/opencv_for_android_${ANDROID_ABI}/sdk/native/jni/include")
 set(OPENCV_LIB_DIR "D:/share/opencv_for_android_${ANDROID_ABI}/sdk/native/libs/${ANDROID_ABI}")
-set(OPENCV_LIBS  opencv_core opencv_imgproc opencv_dnn opencv_face)
+set(OPENCV_LIBS  opencv_core opencv_imgproc opencv_imgcodecs opencv_dnn opencv_face)
 
 foreach(name in ${OPENCV_LIBS})
     add_library(${name} SHARED IMPORTED )

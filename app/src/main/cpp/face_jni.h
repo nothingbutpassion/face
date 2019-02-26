@@ -28,6 +28,8 @@ JNIEXPORT void JNICALL Java_com_hangsheng_face_NativeBuffer_nativeFlip(JNIEnv* e
     jobject srcBuffer, jint srcWidth, jint srcHeight, jint srcStride, jobject dstBuffer, jint dstStride, jint flipCode);
 JNIEXPORT void JNICALL Java_com_hangsheng_face_NativeBuffer_nativeRotate(JNIEnv* env, jclass cls,
     jobject srcBuffer, jint srcWidth, jint srcHeight, jint srcStride, jobject dstBuffer, jint dstStride, jint rotateCode);
+JNIEXPORT void JNICALL Java_com_hangsheng_face_NativeBuffer_nativeDecode(JNIEnv* env, jclass cls,
+    jobject srcBuffer, jint srcSize, jobject dstBuffer, jint dstWidth, jint dstHeight, jint dstStride);
 #ifdef __cplusplus
 }
 #endif
