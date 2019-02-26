@@ -15,7 +15,7 @@ public class NativeBuffer {
     private ByteBuffer mByteBuffer;
 
     public NativeBuffer(Image image) {
-        mWidth =image.getWidth();
+        mWidth = image.getWidth();
         mHeight = image.getHeight();
         mFormat = image.getFormat();
         mStride = image.getPlanes()[0].getRowStride();
@@ -83,7 +83,7 @@ public class NativeBuffer {
         ByteBuffer outBuffer = ByteBuffer.allocateDirect(mWidth*mHeight*4);
         if (rotateCode == 90 || rotateCode == 270) {
             nativeRotate(mByteBuffer, mWidth, mHeight, mStride, outBuffer, mHeight*4, rotateCode);
-            return  new NativeBuffer(outBuffer, mHeight, mWidth, mFormat, mHeight*4);
+            return new NativeBuffer(outBuffer, mHeight, mWidth, mFormat, mHeight*4);
         } else {
             nativeRotate(mByteBuffer, mWidth, mHeight, mStride, outBuffer, mWidth*4, rotateCode);
             return  new NativeBuffer(outBuffer, mWidth, mHeight, mFormat, mWidth*4);

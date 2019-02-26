@@ -2,8 +2,6 @@ package com.hangsheng.face;
 
 import android.app.Service;
 import android.content.Context;
-import android.graphics.Bitmap;
-import android.graphics.Canvas;
 import android.graphics.ImageFormat;
 import android.graphics.Matrix;
 import android.graphics.PixelFormat;
@@ -12,18 +10,22 @@ import android.hardware.camera2.CameraCaptureSession;
 import android.hardware.camera2.CameraCharacteristics;
 import android.hardware.camera2.CameraDevice;
 import android.hardware.camera2.CameraManager;
+import android.hardware.camera2.CaptureFailure;
 import android.hardware.camera2.CaptureRequest;
+import android.hardware.camera2.TotalCaptureResult;
 import android.hardware.camera2.params.StreamConfigurationMap;
 import android.media.Image;
 import android.media.ImageReader;
 import android.os.Handler;
 import android.os.HandlerThread;
+import android.support.annotation.NonNull;
 import android.util.Log;
 import android.util.Size;
 import android.view.Surface;
 import android.view.WindowManager;
 
-import java.nio.IntBuffer;
+import java.lang.reflect.Array;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
@@ -38,6 +40,7 @@ public class VideoCapture {
     private int mOutputWidth = 1280;
     private int mOutputHeight = 720;
     private int mOutputFormat = PixelFormat.RGBA_8888;
+    private Surface mPreviewSurface;
 
     // Capture listener can be set before open, can be changed after open
     // NOTES: current implementation is not thread-safe
@@ -52,8 +55,17 @@ public class VideoCapture {
     private HandlerThread mBackgroundThread;
     private Handler mBackgroundHandler;
 
+    // This listener is invoked when an image is captured
+    public interface CaptureListener {
+        void onCaptured(Image image);
+    }
+
     public VideoCapture(Context context) {
         mContext = context;
+    }
+
+    public void setPreviewSurface(Surface surface) {
+        mPreviewSurface = surface;
     }
 
     // NOTES:
@@ -67,10 +79,6 @@ public class VideoCapture {
         mOutputWidth = width;
         mOutputHeight = height;
         mOutputFormat = format;
-    }
-
-    public interface CaptureListener {
-        void onCaptured(Image image);
     }
 
     public void setCaptureListener(CaptureListener captureListener) {
@@ -211,20 +219,27 @@ public class VideoCapture {
 
     private void startCapture() {
         try {
-            // Prepare capture surface
+            // Setup ImageReader to read image when captured
             final ImageReader imageReader = ImageReader.newInstance(mOutputWidth, mOutputHeight, mOutputFormat, 4);
             imageReader.setOnImageAvailableListener(new ImageReader.OnImageAvailableListener() {
                 @Override
                 public void onImageAvailable(ImageReader reader) {
                     Image image = reader.acquireNextImage();
-                    if (mCaptureListener != null) {
-                        mCaptureListener.onCaptured(image);
+                    if (image != null) {
+                        if (mCaptureListener != null) {
+                            mCaptureListener.onCaptured(image);
+                        }
+                        image.close();
                     }
-                    image.close();
                 }
             }, mBackgroundHandler);
-            // NOTES: Arrays.asList() returns a fixed-sized list which can be changed.
-            List<Surface> outputSurfaces = Arrays.asList(imageReader.getSurface());
+            // NOTES:
+            // Arrays.asList() returns a fixed-sized list which can be changed.
+            List<Surface> outputSurfaces = new ArrayList<>();
+            outputSurfaces.add(imageReader.getSurface());
+            if (mPreviewSurface != null) {
+                outputSurfaces.add(mPreviewSurface);
+            }
 
             // Create capture session
             mCameraDevice.createCaptureSession(outputSurfaces, new CameraCaptureSession.StateCallback() {
@@ -233,16 +248,21 @@ public class VideoCapture {
                     try {
                         mCameraCaptureSession = session;
                         // Create capture request
-                        CaptureRequest.Builder builder = mCameraDevice.createCaptureRequest(CameraDevice.TEMPLATE_PREVIEW);
-                        builder.addTarget(imageReader.getSurface());
+                        // NOTES:
+                        // Template type CameraDevice.TEMPLATE_PREVIEW can't work on imx8 device
+                        int templateType = (mOutputFormat == PixelFormat.RGBA_8888 ? CameraDevice.TEMPLATE_PREVIEW : CameraDevice.TEMPLATE_STILL_CAPTURE);
+                        CaptureRequest.Builder builder = mCameraDevice.createCaptureRequest(templateType);
                         builder.set(CaptureRequest.CONTROL_AF_MODE, CaptureRequest.CONTROL_AF_MODE_CONTINUOUS_PICTURE);
+                        builder.addTarget(imageReader.getSurface());
+                        if (mPreviewSurface != null) {
+                            builder.addTarget(mPreviewSurface);
+                        }
                         // Send repeating capture request
                         mCameraCaptureSession.setRepeatingRequest(builder.build(), null, mBackgroundHandler);
                     } catch (CameraAccessException e) {
                         e.printStackTrace();
                     }
                 }
-
                 @Override
                 public void onConfigureFailed(CameraCaptureSession session) {
                     mCameraCaptureSession = null;
@@ -271,8 +291,11 @@ public class VideoCapture {
         CameraManager manager = (CameraManager) mContext.getSystemService(Service.CAMERA_SERVICE);
         try {
             String[] cameraIds = manager.getCameraIdList();
-            CameraCharacteristics characteristics = null;
+            if (cameraIds == null || cameraIds.length == 0) {
+                return selected;
+            }
             // Select the camera which meets facing requirement.
+            CameraCharacteristics characteristics = null;
             for (final String cameraId : cameraIds) {
                 characteristics = manager.getCameraCharacteristics(cameraId);
                 int facing = characteristics.get(CameraCharacteristics.LENS_FACING);
@@ -300,28 +323,29 @@ public class VideoCapture {
             //  Stream configuration map
             StreamConfigurationMap map = characteristics.get(CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP);
             int[] formats = map.getOutputFormats();
+            // For debugging supported output formats & sizes
             for (int format : formats) {
                 StringBuilder outputFormat = new StringBuilder();
-                outputFormat.append("output format: " + format + "size: ");
+                outputFormat.append("output format: " + format + " size: ");
                 Size[] sizes = map.getOutputSizes(format);
                 for (Size s : sizes) {
                     outputFormat.append(" " + s.getWidth() + "x" + s.getHeight());
                 }
                 Log.d(TAG, outputFormat.toString());
             }
+
             // Select output format
             if (!map.isOutputSupportedFor(mOutputFormat)) {
-                if (map.isOutputSupportedFor(PixelFormat.RGB_888)) {
-                    mOutputFormat = PixelFormat.RGB_888;
-                } else if (map.isOutputSupportedFor(PixelFormat.RGBA_8888)) {
+                if (map.isOutputSupportedFor(PixelFormat.RGBA_8888)) {
                     mOutputFormat = PixelFormat.RGBA_8888;
-                } else if (map.isOutputSupportedFor(ImageFormat.YV12)) {
-                    mOutputFormat = ImageFormat.YV12;
+                } else if (map.isOutputSupportedFor(ImageFormat.JPEG)) {
+                    mOutputFormat = ImageFormat.JPEG;
+                } else if (map.isOutputSupportedFor(ImageFormat.YUV_420_888)) {
+                    mOutputFormat = ImageFormat.YUV_420_888;
                 } else {
                     mOutputFormat = formats[0];
                 }
             }
-            Log.i(TAG, "output format: " + mOutputFormat);
 
             // Select output size
             Size[] sizes = map.getOutputSizes(mOutputFormat);
@@ -339,23 +363,28 @@ public class VideoCapture {
             }
             mOutputWidth = size.getWidth();
             mOutputHeight = size.getHeight();
-            Log.i(TAG, "output size: " + mOutputWidth + "x" + mOutputHeight);
+            Log.i(TAG, "output size: " + mOutputWidth + "x" + mOutputHeight + "is selected");
 
             // NOTES:
             // In most case, you can pass a RGBA_8888 SurfaceView as the output for camera review.
-            // So, in fact, RGBA_8888 is impliedly supported by most cameras.
-            mOutputFormat = PixelFormat.RGBA_8888;
-            Log.i(TAG, "final output format: " + mOutputFormat);
+            // So, RGBA_8888 is impliedly supported by most mobile phone cameras.
+            if (cameraIds.length > 1) {
+                mOutputFormat = PixelFormat.RGBA_8888;
+            }
+            Log.i(TAG, "output format: " + mOutputFormat + " is selected");
         } catch (CameraAccessException e) {
+            selected = null;
             e.printStackTrace();
         }
         return selected;
     }
 
     private void startBackgroundThread() {
-        mBackgroundThread = new HandlerThread("CameraBackground");
-        mBackgroundThread.start();
-        mBackgroundHandler = new Handler(mBackgroundThread.getLooper());
+        if (mBackgroundHandler == null) {
+            mBackgroundThread = new HandlerThread("CameraBackground");
+            mBackgroundThread.start();
+            mBackgroundHandler = new Handler(mBackgroundThread.getLooper());
+        }
     }
 
     private void stopBackgroundThread() {
