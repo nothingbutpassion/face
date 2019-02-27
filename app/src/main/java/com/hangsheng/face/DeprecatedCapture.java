@@ -1,16 +1,12 @@
 package com.hangsheng.face;
 
 import android.graphics.ImageFormat;
-import android.graphics.SurfaceTexture;
 import android.hardware.Camera;
-import android.media.Image;
-import android.media.ImageReader;
 import android.util.Log;
 import android.view.SurfaceHolder;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
-import java.util.List;
 
 public class DeprecatedCapture {
 
