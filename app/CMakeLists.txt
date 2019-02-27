@@ -11,7 +11,8 @@ cmake_minimum_required(VERSION 3.4.1)
 #target_link_libraries(face ${OpenCV_LIBS})
 
 # NOTES:
-# Opencv shared libs can be built like the following
+# Opencv shared libs can be built like as follows (opencv 4.0 & NDK-r17 & cmake 3.6.3)
+# After building completed, copy <install>/sdk/native/jni/include & <install-dir>/sdk/native/libs to libs/opencv/
 #/home/yuhao/cmake-3.6.3-Linux-x86_64/bin/cmake  \
 #-DOPENCV_EXTRA_MODULES_PATH=/home/yuhao/opencv_contrib/modules  \
 #-DCMAKE_INSTALL_PREFIX=/home/yuhao/opencv/build_for_android_arm64-v8a/install    \
@@ -30,10 +31,9 @@ cmake_minimum_required(VERSION 3.4.1)
 
 # NOTES:
 # Set OPENCV_INC_DIR/OPENCV_LIB_DIR as OpenCV include/libs directory
-# ${ANDROID_ABI} is set by gradle.
-# See .externalNativeBuild/cmake/<debug or release>/<abi>/cmake_build_command.txt
-set(OPENCV_INC_DIR "D:/share/opencv_for_android_${ANDROID_ABI}/sdk/native/jni/include")
-set(OPENCV_LIB_DIR "D:/share/opencv_for_android_${ANDROID_ABI}/sdk/native/libs/${ANDROID_ABI}")
+# ${ANDROID_ABI} is set by gradle. see .externalNativeBuild/cmake/<debug or release>/<abi>/cmake_build_command.txt
+set(OPENCV_INC_DIR "${CMAKE_CURRENT_SOURCE_DIR}/libs/opencv/include")
+set(OPENCV_LIB_DIR "${CMAKE_CURRENT_SOURCE_DIR}/libs/opencv/libs/${ANDROID_ABI}")
 set(OPENCV_LIBS  opencv_core opencv_imgproc opencv_imgcodecs opencv_dnn opencv_face)
 
 foreach(name in ${OPENCV_LIBS})
