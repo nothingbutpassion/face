@@ -367,7 +367,7 @@ public class VideoCapture {
 
             // NOTES:
             // In most case, you can pass a RGBA_8888 SurfaceView as the output for camera review.
-            // So, RGBA_8888 is impliedly supported by most mobile phone cameras.
+            // So, RGBA_8888 is impliedly supported by most mobile phone cameras (excepts imx8)
             if (cameraIds.length > 1) {
                 mOutputFormat = PixelFormat.RGBA_8888;
             }

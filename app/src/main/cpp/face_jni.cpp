@@ -151,3 +151,12 @@ JNIEXPORT void JNICALL Java_com_hangsheng_face_NativeBuffer_nativeDecode(JNIEnv*
     Mat img = imdecode(src, IMREAD_COLOR);
     cvtColor(img, dst, COLOR_BGR2RGBA);
 }
+
+JNIEXPORT void JNICALL Java_com_hangsheng_face_NativeBuffer_nativeNV21ToRGBA(JNIEnv* env, jclass cls,
+    jbyteArray srcBuffer, jobject dstBuffer, jint dstWidth, jint dstHeight, jint dstStride) {
+    Mat rgba(dstHeight, dstWidth, CV_8UC4, env->GetDirectBufferAddress(dstBuffer), dstStride);
+    void* src = env->GetPrimitiveArrayCritical(srcBuffer, 0);
+    Mat nv21(dstHeight + dstHeight/2, dstWidth, CV_8UC1, src);
+    cvtColor(nv21, rgba, COLOR_YUV2RGBA_NV21);
+    env->ReleasePrimitiveArrayCritical(srcBuffer, src, JNI_ABORT);
+}

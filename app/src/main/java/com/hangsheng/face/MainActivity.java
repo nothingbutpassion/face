@@ -6,30 +6,22 @@ import android.app.Activity;
 import android.content.Context;
 import android.content.pm.PackageManager;
 import android.content.res.AssetManager;
-import android.graphics.Bitmap;
-import android.graphics.BitmapFactory;
-import android.graphics.Canvas;
-import android.graphics.ImageFormat;
-import android.graphics.Matrix;
 import android.graphics.PixelFormat;
 import android.media.Image;
 import android.os.Bundle;
 import android.os.Environment;
-import android.os.Handler;
 import android.support.v4.app.ActivityCompat;
 import android.util.Log;
 import android.view.Surface;
 import android.view.SurfaceHolder;
 import android.view.SurfaceView;
 import android.view.View;
-import android.widget.TextView;
 import android.widget.Toast;
 
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.nio.ByteBuffer;
 
 public class MainActivity extends Activity {
     private final String TAG = "MainActivity";
@@ -37,7 +29,6 @@ public class MainActivity extends Activity {
     private VideoCapture mVideoCapture;
     private FaceDetector mFaceDetector;
     private Surface mPreviewSurface;
-    private TextView mTextView;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -77,9 +68,7 @@ public class MainActivity extends Activity {
         }
 
         setContentView(R.layout.activity_main);
-        mTextView = (TextView) findViewById(R.id.status_text);
-
-        SurfaceView surfaceView = ((SurfaceView) findViewById(R.id.camera_view));
+        SurfaceView surfaceView = (SurfaceView) findViewById(R.id.preview);
         surfaceView.setOnClickListener(new View.OnClickListener() {
             private int cameraDevice = 0;
             @Override
@@ -99,56 +88,35 @@ public class MainActivity extends Activity {
                 mFaceDetector = new FaceDetector();
                 mFaceDetector.open();
                 mVideoCapture = new VideoCapture(MainActivity.this);
-                //mVideoCapture.setPreviewSurface(mPreviewSurface);
                 mVideoCapture.setCaptureImage(640, 480, PixelFormat.RGBA_8888);
                 mVideoCapture.setCaptureListener(new VideoCapture.CaptureListener() {
                     @Override
                     public void onCaptured(Image image) {
-//                        int format = image.getFormat();
-//                        if (format == ImageFormat.JPEG) {
-//                            // Consider use opencv imdecode to decode JPEG buffer
-//                            ByteBuffer buffer = image.getPlanes()[0].getBuffer();
-//                            int remaining = buffer.remaining();
-//                            Log.d(TAG, "captured image: size=" + image.getWidth() + "x" + image.getHeight()
-//                                    + " format=" + image.getFormat() + " bytes=" + remaining);
-//                            byte[] data = new byte[remaining];
-//                            buffer.get(data);
-//                            Bitmap bitmap = BitmapFactory.decodeByteArray(data, 0, data.length);
-//                            Log.d(TAG, "decoded bitmap: size=" + bitmap.getWidth() + "x" + bitmap.getHeight() + " config=" + bitmap.getConfig());
-//                            // Draw surface
-//                            if (mPreviewSurface != null) {
-//                                Canvas canvas = mPreviewSurface.lockCanvas(null);
-//                                Matrix matrix = mVideoCapture.getCaptureTransform(bitmap.getWidth(), bitmap.getHeight(), canvas.getWidth(), canvas.getHeight());
-//                                canvas.drawBitmap(bitmap, matrix, null);
-//                                mPreviewSurface.unlockCanvasAndPost(canvas);
-//                            }
-//                        } else if (format == PixelFormat.RGBA_8888) {
-                            long t0 = System.currentTimeMillis();
-                            // Draw surface
-                            if (mPreviewSurface != null) {
-                                long t1 = System.currentTimeMillis();
-                                NativeBuffer nativeBuffer = NativeBuffer.from(image);
-                                Log.i(TAG, "NativeBuffer.<init>: " + (System.currentTimeMillis() - t1) + "ms");
+                        long t0 = System.currentTimeMillis();
+                        // Draw surface
+                        if (mPreviewSurface != null) {
+                            long t1 = System.currentTimeMillis();
+                            NativeBuffer nativeBuffer = NativeBuffer.fromImage(image);
+                            Log.i(TAG, "NativeBuffer.<init>: " + (System.currentTimeMillis() - t1) + "ms");
 
-                                long t2 = System.currentTimeMillis();
-                                nativeBuffer = nativeBuffer.rotate(mVideoCapture.getCaptureRotation());
-                                Log.i(TAG, "NativeBuffer.rotate: " + (System.currentTimeMillis() - t2) + "ms");
+                            long t2 = System.currentTimeMillis();
+                            nativeBuffer = nativeBuffer.rotate(mVideoCapture.getCaptureRotation());
+                            Log.i(TAG, "NativeBuffer.rotate: " + (System.currentTimeMillis() - t2) + "ms");
 
-                                long t3 = System.currentTimeMillis();
-                                nativeBuffer = nativeBuffer.flip(mVideoCapture.getCaptureFlipping());
-                                Log.i(TAG, "NativeBuffer.flip: " + (System.currentTimeMillis() - t3) + "ms");
+                            long t3 = System.currentTimeMillis();
+                            nativeBuffer = nativeBuffer.flip(mVideoCapture.getCaptureFlipping());
+                            Log.i(TAG, "NativeBuffer.flip: " + (System.currentTimeMillis() - t3) + "ms");
 
-                                // Face detection;
-                                long t4 = System.currentTimeMillis();
-                                //mFaceDetector.process(nativeBuffer);
-                                Log.i(TAG, "FaceDetector.process: " + (System.currentTimeMillis() - t4) + "ms");
+                            // Face detection;
+                            long t4 = System.currentTimeMillis();
+                            mFaceDetector.process(nativeBuffer);
+                            Log.i(TAG, "FaceDetector.process: " + (System.currentTimeMillis() - t4) + "ms");
 
-                                long t5 = System.currentTimeMillis();
-                                nativeBuffer.draw(mPreviewSurface);
-                                Log.i(TAG, "NativeBuffer.draw: " + (System.currentTimeMillis() - t5) + "ms");
-                            }
-                            Log.i(TAG, "VideoCapture.onCaptured: " + (System.currentTimeMillis() - t0) + "ms");
-//                        }
+                            long t5 = System.currentTimeMillis();
+                            nativeBuffer.draw(mPreviewSurface);
+                            Log.i(TAG, "NativeBuffer.draw: " + (System.currentTimeMillis() - t5) + "ms");
+                        }
+                        Log.i(TAG, "VideoCapture.onCaptured: " + (System.currentTimeMillis() - t0) + "ms");
                     }
                 });
                 mVideoCapture.open();
@@ -167,16 +135,6 @@ public class MainActivity extends Activity {
             }
         });
         surfaceView.getHolder().setFormat(PixelFormat.RGBA_8888);
-    }
-
-    @Override
-    protected void onResume() {
-        super.onResume();
-    }
-
-    @Override
-    protected void onPause() {
-        super.onPause();
     }
 
     @Override

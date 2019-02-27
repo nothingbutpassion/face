@@ -14,9 +14,9 @@ public class NativeBuffer {
     private int mStride;
     private ByteBuffer mByteBuffer;
 
-    public static NativeBuffer from(Image image) {
-        // NOTES:
-        // Currently, only RGBA and JPEG are supported.
+    // NOTES:
+    // Currently, only support RGBA/JPEG Image
+    public static NativeBuffer fromImage(Image image) {
         int width = image.getWidth();
         int height = image.getHeight();
         int format = image.getFormat();
@@ -31,6 +31,14 @@ public class NativeBuffer {
             return new NativeBuffer(outBuffer, width, height, PixelFormat.RGBA_8888, width*4);
         }
         return null;
+    }
+
+    // NOTES:
+    // Currently, only support RGBA/JPEG Image
+    public static NativeBuffer fromNV21(byte[] nv21, int width, int height) {
+            ByteBuffer rgbaBuffer = ByteBuffer.allocateDirect(width*height*4);
+            nativeNV21ToRGBA(nv21, rgbaBuffer, width, height, width*4);
+            return new NativeBuffer(rgbaBuffer, width, height, PixelFormat.RGBA_8888, width*4);
     }
 
 
@@ -99,4 +107,5 @@ public class NativeBuffer {
                                           ByteBuffer dstBuffer, int dstStride, int rotateCode);
 
     private static native void nativeDecode(ByteBuffer srcBuffer, int srcSize, ByteBuffer dstBuffer, int dstWidth, int dstHeight, int dstStride);
+    private static native void nativeNV21ToRGBA(byte[] srcBuffer, ByteBuffer dstBuffer, int dstWidth, int dstHeight, int dstStride);
 }
