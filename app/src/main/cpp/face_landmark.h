@@ -1,5 +1,5 @@
-#ifndef FACE_FACE_LANDMARK_H
-#define FACE_FACE_LANDMARK_H
+#ifndef FACE_LANDMARK_H
+#define FACE_LANDMARK_H
 
 #include <string>
 #include <vector>
@@ -8,7 +8,7 @@
 class FaceLandmark {
 public:
     FaceLandmark();
-    bool load(const std::string& modelFile);
+    bool load(const std::string& modelDir);
     bool fit(const cv::Mat& image, const std::vector<cv::Rect>& faces, std::vector<std::vector<cv::Point2f>>& landmarks);
 
 private:
@@ -16,4 +16,4 @@ private:
 };
 
 
-#endif
+#endif // FACE_LANDMARK_H

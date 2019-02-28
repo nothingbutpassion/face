@@ -32,8 +32,8 @@ public class VideoCapture {
 
     // These params can be set before open, may be changed in open, but fixed after open
     private int mCameraFacing = CameraCharacteristics.LENS_FACING_FRONT;
-    private int mOutputWidth = 1280;
-    private int mOutputHeight = 720;
+    private int mOutputWidth = 640;
+    private int mOutputHeight = 480;
     private int mOutputFormat = PixelFormat.RGBA_8888;
     private Surface mPreviewSurface;
 

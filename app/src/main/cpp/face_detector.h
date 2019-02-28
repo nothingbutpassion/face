@@ -1,5 +1,5 @@
-#ifndef FACE_FACE_DETECTOR_H
-#define FACE_FACE_DETECTOR_H
+#ifndef FACE_DETECTOR_H
+#define FACE_DETECTOR_H
 
 #include <string>
 #include <vector>
@@ -9,16 +9,16 @@
 class FaceDetector {
 public:
     bool load(const std::string& modelDir);
-    void detect(const cv::Mat& image, std::vector<cv::Rect>& objects);
+    void detect(const cv::Mat& image, std::vector<cv::Rect>& objects, std::vector<float>& confidences);
     bool fit(const cv::Mat& image, const cv::Rect& face, std::vector<cv::Point2f>& landmarks);
 
     // Process all face-related stuff
-    void process(cv::Mat& image);
+    //void process(cv::Mat& image);
 private:
-    FaceLandmark mFaceLandmark;
+//    FaceLandmark mFaceLandmark;
     cv::dnn::Net mFaceNet;
 
 };
 
 
-#endif //FACE_FACE_DETECTOR_H
+#endif // FACE_DETECTOR_H

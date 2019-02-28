@@ -47,7 +47,9 @@ endforeach()
 # You can define multiple libraries, and CMake builds them for you.
 # Gradle automatically packages shared libraries with your APK.
 add_library(face SHARED
-        src/main/cpp/face_jni.cpp
+        src/main/cpp/nativebuffer_jni.cpp
+        src/main/cpp/dmsworker_jni.cpp
+        src/main/cpp/dmsworker.cpp
         src/main/cpp/face_detector.cpp
         src/main/cpp/face_landmark.cpp
         src/main/cpp/utils.cpp)

@@ -7,8 +7,6 @@
 static JavaVM* gJavaVM;
 static pthread_key_t gThreadKey;
 
-
-
 // NOTES:
 // At thread exit, if a key value has a non-NULL destructor pointer, and the thread has a non-NULL value
 // associated with that key, the value of the key is set to NULL, and then the function pointed to is called

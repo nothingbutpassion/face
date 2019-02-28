@@ -13,7 +13,8 @@ FaceLandmark::FaceLandmark() {
     mFacemark = face::FacemarkLBF::create(face::FacemarkLBF::Params());
 }
 
-bool FaceLandmark::load(const string& modelFile) {
+bool FaceLandmark::load(const string& modelDir) {
+    string modelFile = modelDir + "/lbfmodel.yaml";
     mFacemark->loadModel(modelFile);
     if (mFacemark->empty()) {
         LOGE("failed to load model file: %s", modelFile.c_str());

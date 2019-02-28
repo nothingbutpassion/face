@@ -1,76 +1,13 @@
-#include <pthread.h>
-#include <string>
-
+#include "nativebuffer_jni.h"
 #include <android/native_window_jni.h>
 #include <android/native_window.h>
-
 #include <opencv2/core.hpp>
 #include <opencv2/imgproc.hpp>
 #include <opencv2/imgcodecs.hpp>
 
 #include "utils.h"
-#include "face_detector.h"
-#include "face_jni.h"
 
-using namespace std;
 using namespace cv;
-
-
-//
-// com.hsae.dms.FaceDetector
-//
-JNIEXPORT jlong JNICALL Java_com_hsae_dms_FaceDetector_nativeCreate(JNIEnv* env, jclass cls, jstring modelDir) {
-    const char* dir = env->GetStringUTFChars(modelDir, nullptr);
-    FaceDetector* faceDetector = new FaceDetector();
-    if (!faceDetector->load(dir)) {
-        delete faceDetector;
-        faceDetector = nullptr;
-    }
-    env->ReleaseStringUTFChars(modelDir, dir);
-    return reinterpret_cast<jlong>(faceDetector);
-}
-
-JNIEXPORT void JNICALL Java_com_hsae_dms_FaceDetector_nativeDestroy(JNIEnv* env, jclass cls, jlong handle) {
-    delete reinterpret_cast<FaceDetector*>(handle);
-}
-JNIEXPORT jobjectArray JNICALL Java_com_hsae_dms_FaceDetector_nativeDetect(JNIEnv *env, jclass cls,
-    jlong handle, jobject byteBuffer, jint width, jint height, jint stride) {
-
-    // The external data is not automatically de-allocated
-    Mat image(height, width, CV_8UC4, env->GetDirectBufferAddress(byteBuffer), stride);
-
-    // Detect face from given image
-    FaceDetector* faceDetector = reinterpret_cast<FaceDetector*>(handle);
-    vector<Rect> faces;
-    faceDetector->detect(image, faces);
-
-    // Construct Java android.graphics.Rect[] instance
-    jobjectArray rectArray = newRectArray(faces);
-    return rectArray;
-}
-JNIEXPORT jobjectArray JNICALL Java_com_hsae_dms_FaceDetector_nativeGetMarks(JNIEnv *env, jclass cls,
-    jlong handle, jobject byteBuffer, jint width, jint height, jint stride, jobject roi) {
-    Mat image(height, width, CV_8UC4, env->GetDirectBufferAddress(byteBuffer), stride);
-    FaceDetector* faceDetector = reinterpret_cast<FaceDetector*>(handle);
-    vector<Point2f> landmarks;
-    Rect face = toRect(roi);
-    faceDetector->fit(image, face, landmarks);
-    return newPointFArray(landmarks);
-}
-//
-// Process all face-related stuff
-//
-JNIEXPORT void JNICALL Java_com_hsae_dms_FaceDetector_nativeProcess(JNIEnv *env, jclass cls,
-    jlong handle, jobject byteBuffer, jint width, jint height, jint stride) {
-
-    // The external data is not automatically de-allocated
-    Mat image(height, width, CV_8UC4, env->GetDirectBufferAddress(byteBuffer), stride);
-
-    // Process all face-related stuff
-    FaceDetector* faceDetector = reinterpret_cast<FaceDetector*>(handle);
-    faceDetector->process(image);
-
-}
 
 //
 // com.hsae.dms.NativeBuffer
@@ -145,7 +82,7 @@ JNIEXPORT void JNICALL Java_com_hsae_dms_NativeBuffer_nativeRotate(JNIEnv* env, 
 }
 
 JNIEXPORT void JNICALL Java_com_hsae_dms_NativeBuffer_nativeDecode(JNIEnv* env, jclass cls,
-        jobject srcBuffer, jint srcSize, jobject dstBuffer, jint dstWidth, jint dstHeight, jint dstStride) {
+    jobject srcBuffer, jint srcSize, jobject dstBuffer, jint dstWidth, jint dstHeight, jint dstStride) {
     Mat src(1, srcSize, CV_8UC1, env->GetDirectBufferAddress(srcBuffer), srcSize);
     Mat dst(dstHeight, dstWidth, CV_8UC4, env->GetDirectBufferAddress(dstBuffer), dstStride);
     Mat img = imdecode(src, IMREAD_COLOR);
@@ -160,3 +97,5 @@ JNIEXPORT void JNICALL Java_com_hsae_dms_NativeBuffer_nativeNV21ToRGBA(JNIEnv* e
     cvtColor(nv21, rgba, COLOR_YUV2RGBA_NV21);
     env->ReleasePrimitiveArrayCritical(srcBuffer, src, JNI_ABORT);
 }
+
+

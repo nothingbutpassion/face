@@ -1,5 +1,5 @@
-#ifndef FACE_UTILS_H
-#define FACE_UTILS_H
+#ifndef UTILS_H
+#define UTILS_H
 
 #include <jni.h>
 #include <vector>
@@ -22,12 +22,10 @@
 
 
 JNIEnv* getJNIEnv();
-
-
 cv::Rect toRect(jobject javaRect, JNIEnv* env = nullptr);
 jobjectArray newRectArray(const std::vector<cv::Rect>& rects, JNIEnv* env = nullptr);
 jobjectArray newPointFArray(const std::vector<cv::Point2f>& points, JNIEnv* env = nullptr);
 
 
 
-#endif //FACE_UTILS_H
+#endif // UTILS_H
