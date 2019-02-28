@@ -1,23 +1,11 @@
-package com.hangsheng.face;
+package com.hsae.dms;
 
-import android.app.Service;
-import android.content.Context;
-import android.content.res.AssetManager;
-import android.graphics.ImageFormat;
 import android.graphics.PixelFormat;
-import android.graphics.Point;
 import android.graphics.PointF;
 import android.graphics.Rect;
-import android.media.Image;
 import android.os.Environment;
 
-import java.io.File;
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
 import java.nio.ByteBuffer;
-import java.util.logging.Handler;
 
 public class FaceDetector {
 

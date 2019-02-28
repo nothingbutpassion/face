@@ -17,9 +17,9 @@ using namespace cv;
 
 
 //
-// com.hangsheng,face.FaceDetector
+// com.hsae.dms.FaceDetector
 //
-JNIEXPORT jlong JNICALL Java_com_hangsheng_face_FaceDetector_nativeCreate(JNIEnv* env, jclass cls, jstring modelDir) {
+JNIEXPORT jlong JNICALL Java_com_hsae_dms_FaceDetector_nativeCreate(JNIEnv* env, jclass cls, jstring modelDir) {
     const char* dir = env->GetStringUTFChars(modelDir, nullptr);
     FaceDetector* faceDetector = new FaceDetector();
     if (!faceDetector->load(dir)) {
@@ -30,10 +30,10 @@ JNIEXPORT jlong JNICALL Java_com_hangsheng_face_FaceDetector_nativeCreate(JNIEnv
     return reinterpret_cast<jlong>(faceDetector);
 }
 
-JNIEXPORT void JNICALL Java_com_hangsheng_face_FaceDetector_nativeDestroy(JNIEnv* env, jclass cls, jlong handle) {
+JNIEXPORT void JNICALL Java_com_hsae_dms_FaceDetector_nativeDestroy(JNIEnv* env, jclass cls, jlong handle) {
     delete reinterpret_cast<FaceDetector*>(handle);
 }
-JNIEXPORT jobjectArray JNICALL Java_com_hangsheng_face_FaceDetector_nativeDetect(JNIEnv *env, jclass cls,
+JNIEXPORT jobjectArray JNICALL Java_com_hsae_dms_FaceDetector_nativeDetect(JNIEnv *env, jclass cls,
     jlong handle, jobject byteBuffer, jint width, jint height, jint stride) {
 
     // The external data is not automatically de-allocated
@@ -48,7 +48,7 @@ JNIEXPORT jobjectArray JNICALL Java_com_hangsheng_face_FaceDetector_nativeDetect
     jobjectArray rectArray = newRectArray(faces);
     return rectArray;
 }
-JNIEXPORT jobjectArray JNICALL Java_com_hangsheng_face_FaceDetector_nativeGetMarks(JNIEnv *env, jclass cls,
+JNIEXPORT jobjectArray JNICALL Java_com_hsae_dms_FaceDetector_nativeGetMarks(JNIEnv *env, jclass cls,
     jlong handle, jobject byteBuffer, jint width, jint height, jint stride, jobject roi) {
     Mat image(height, width, CV_8UC4, env->GetDirectBufferAddress(byteBuffer), stride);
     FaceDetector* faceDetector = reinterpret_cast<FaceDetector*>(handle);
@@ -60,7 +60,7 @@ JNIEXPORT jobjectArray JNICALL Java_com_hangsheng_face_FaceDetector_nativeGetMar
 //
 // Process all face-related stuff
 //
-JNIEXPORT void JNICALL Java_com_hangsheng_face_FaceDetector_nativeProcess(JNIEnv *env, jclass cls,
+JNIEXPORT void JNICALL Java_com_hsae_dms_FaceDetector_nativeProcess(JNIEnv *env, jclass cls,
     jlong handle, jobject byteBuffer, jint width, jint height, jint stride) {
 
     // The external data is not automatically de-allocated
@@ -73,9 +73,9 @@ JNIEXPORT void JNICALL Java_com_hangsheng_face_FaceDetector_nativeProcess(JNIEnv
 }
 
 //
-// com.hangsheng,face.NativeBuffer
+// com.hsae.dms.NativeBuffer
 //
-JNIEXPORT void JNICALL Java_com_hangsheng_face_NativeBuffer_nativeDraw(JNIEnv* env, jclass cls,
+JNIEXPORT void JNICALL Java_com_hsae_dms_NativeBuffer_nativeDraw(JNIEnv* env, jclass cls,
     jobject surface, jobject byteBuffer, jint width, jint height, jint stride) {
     ANativeWindow* window = ANativeWindow_fromSurface(env, surface);
     if (window) {
@@ -105,7 +105,7 @@ JNIEXPORT void JNICALL Java_com_hangsheng_face_NativeBuffer_nativeDraw(JNIEnv* e
         ANativeWindow_release(window);
     }
 }
-JNIEXPORT void JNICALL Java_com_hangsheng_face_NativeBuffer_nativeFlip(JNIEnv* env, jclass cls,
+JNIEXPORT void JNICALL Java_com_hsae_dms_NativeBuffer_nativeFlip(JNIEnv* env, jclass cls,
     jobject srcBuffer, jint srcWidth, jint srcHeight, jint srcStride, jobject dstBuffer, jint dstStride, jint flipCode) {
     Mat src(srcHeight, srcWidth, CV_8UC4, env->GetDirectBufferAddress(srcBuffer), srcStride);
     Mat dst(srcHeight, srcWidth, CV_8UC4, env->GetDirectBufferAddress(dstBuffer), dstStride);
@@ -124,7 +124,7 @@ JNIEXPORT void JNICALL Java_com_hangsheng_face_NativeBuffer_nativeFlip(JNIEnv* e
         src.copyTo(dst);
     }
 }
-JNIEXPORT void JNICALL Java_com_hangsheng_face_NativeBuffer_nativeRotate(JNIEnv* env, jclass cls,
+JNIEXPORT void JNICALL Java_com_hsae_dms_NativeBuffer_nativeRotate(JNIEnv* env, jclass cls,
     jobject srcBuffer, jint srcWidth, jint srcHeight, jint srcStride, jobject dstBuffer, jint dstStride, jint rotateCode) {
     Mat src(srcHeight, srcWidth, CV_8UC4, env->GetDirectBufferAddress(srcBuffer), srcStride);
     // rotateCode - counterclockwise rotate degrees: 0, 90, 180, 270
@@ -144,7 +144,7 @@ JNIEXPORT void JNICALL Java_com_hangsheng_face_NativeBuffer_nativeRotate(JNIEnv*
     }
 }
 
-JNIEXPORT void JNICALL Java_com_hangsheng_face_NativeBuffer_nativeDecode(JNIEnv* env, jclass cls,
+JNIEXPORT void JNICALL Java_com_hsae_dms_NativeBuffer_nativeDecode(JNIEnv* env, jclass cls,
         jobject srcBuffer, jint srcSize, jobject dstBuffer, jint dstWidth, jint dstHeight, jint dstStride) {
     Mat src(1, srcSize, CV_8UC1, env->GetDirectBufferAddress(srcBuffer), srcSize);
     Mat dst(dstHeight, dstWidth, CV_8UC4, env->GetDirectBufferAddress(dstBuffer), dstStride);
@@ -152,7 +152,7 @@ JNIEXPORT void JNICALL Java_com_hangsheng_face_NativeBuffer_nativeDecode(JNIEnv*
     cvtColor(img, dst, COLOR_BGR2RGBA);
 }
 
-JNIEXPORT void JNICALL Java_com_hangsheng_face_NativeBuffer_nativeNV21ToRGBA(JNIEnv* env, jclass cls,
+JNIEXPORT void JNICALL Java_com_hsae_dms_NativeBuffer_nativeNV21ToRGBA(JNIEnv* env, jclass cls,
     jbyteArray srcBuffer, jobject dstBuffer, jint dstWidth, jint dstHeight, jint dstStride) {
     Mat rgba(dstHeight, dstWidth, CV_8UC4, env->GetDirectBufferAddress(dstBuffer), dstStride);
     void* src = env->GetPrimitiveArrayCritical(srcBuffer, 0);
