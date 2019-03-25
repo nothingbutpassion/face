@@ -198,6 +198,7 @@ public class MainActivity extends Activity {
 
     public static boolean copyFiles(Context context) {
         String[] assetFiles = new String[] {
+                "kazemi_face_landmark.dat",
                 "lbf_face_landmark.yaml",
                 "ssd_face_detector.prototxt",
                 "ssd_face_detector.caffemodel"

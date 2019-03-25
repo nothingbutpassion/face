@@ -5,6 +5,9 @@
 #include <vector>
 #include <opencv2/face.hpp>
 
+/**
+ *  Based on "Face alignment at 3000 fps via regressing local binary features" by S. Ren published in CVPR 2014.
+ */
 class LBFFaceLandmark {
 public:
     LBFFaceLandmark();

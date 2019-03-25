@@ -5,7 +5,7 @@
 #include <opencv2/core.hpp>
 
 #include "hog_face_detector.h"
-#include "lbf_face_landmark.h"
+#include "kazemi_face_landmark.h"
 
 class DMSWorker {
 public:
@@ -14,7 +14,7 @@ public:
 
 private:
     HOGFaceDetector mFaceDetector;
-    LBFFaceLandmark mFaceLandmark;
+    KazemiFaceLandmark mFaceLandmark;
 };
 
 

@@ -38,6 +38,12 @@ void DMSWorker::process(Mat& image) {
         }
         vector<vector<Point2f>> landmarks;
         mFaceLandmark.fit(image, boxes, landmarks);
+        // Draw landmarks
+        for (int i=0; i < boxes.size(); ++i){
+            for (int j = 0; j < landmarks[i].size(); ++j) {
+                circle(image, landmarks[i][j], 2, CV_RGB(255, 0, 0), -1);
+            }
+        }
     }
 
 }

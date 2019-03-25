@@ -65,6 +65,7 @@ add_library(face SHARED
         src/main/cpp/hog_face_detector.cpp
         src/main/cpp/ssd_face_detector.cpp
         src/main/cpp/lbf_face_landmark.cpp
+        src/main/cpp/kazemi_face_landmark.cpp
         src/main/cpp/utils.cpp
         ${DLIB_ROOT}/dlib/all/source.cpp        # for dlib
         )

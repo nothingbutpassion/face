@@ -29,12 +29,6 @@ bool LBFFaceLandmark::fit(const Mat& image, const vector<Rect>& faces, vector<ve
         LOGE("fit failed");
         return false;
     }
-    // Just for debugging
-    for (int i=0; i < faces.size(); ++i){
-        for (int j = 0; j < landmarks[i].size(); ++j) {
-            circle(image, landmarks[i][j], 2, CV_RGB(0, 255, 0), -1);
-        }
-    }
     return ret;
 }
 
