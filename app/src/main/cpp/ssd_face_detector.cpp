@@ -1,9 +1,9 @@
 #include <opencv2/imgproc.hpp>
 #include "utils.h"
-#include "face_detector.h"
+#include "ssd_face_detector.h"
 
 #undef  LOG_TAG
-#define LOG_TAG "FaceDetector"
+#define LOG_TAG "SSDFaceDetector"
 
 using namespace std;
 using namespace cv;
@@ -20,7 +20,7 @@ static vector<String> getOutputsNames(const dnn::Net& net) {
     return names;
 }
 
-bool FaceDetector::load(const string& modelDir) {
+bool SSDFaceDetector::load(const string& modelDir) {
     string prototxt = modelDir + "/res10_300x300_ssd_iter_140000.prototxt";
     string caffeModel = modelDir + "/res10_300x300_ssd_iter_140000.caffemodel";
     mFaceNet = dnn::readNetFromCaffe(prototxt, caffeModel);
@@ -31,7 +31,7 @@ bool FaceDetector::load(const string& modelDir) {
     return true;
 }
 
-void FaceDetector::detect(const Mat& image, vector<Rect>& objects, vector<float>& scores) {
+void SSDFaceDetector::detect(const Mat& image, vector<Rect>& objects, vector<float>& scores) {
     Mat rgbImage;
     Mat blob;
     vector<Mat> outs;

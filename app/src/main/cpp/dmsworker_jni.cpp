@@ -19,7 +19,7 @@ JNIEXPORT jlong JNICALL Java_com_hsae_dms_DMSWorker_nativeCreate(JNIEnv* env, jc
     return reinterpret_cast<jlong>(worker);
 }
 JNIEXPORT void JNICALL Java_com_hsae_dms_DMSWorker_nativeDestroy(JNIEnv* env, jclass cls, jlong handle) {
-    delete reinterpret_cast<FaceDetector*>(handle);
+    delete reinterpret_cast<DMSWorker*>(handle);
 }
 JNIEXPORT void JNICALL Java_com_hsae_dms_DMSWorker_nativeProcess(JNIEnv *env, jclass cls,
     jlong handle, jobject byteBuffer, jint width, jint height, jint stride) {

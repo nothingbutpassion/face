@@ -4,7 +4,7 @@
 #include <string>
 #include <opencv2/core.hpp>
 
-#include "face_detector.h"
+#include "hog_face_detector.h"
 #include "face_landmark.h"
 
 class DMSWorker {
@@ -13,7 +13,7 @@ public:
     void process(cv::Mat& image);
 
 private:
-    FaceDetector mFaceDetector;
+    HOGFaceDetector mFaceDetector;
     FaceLandmark mFaceLandmark;
 };
 

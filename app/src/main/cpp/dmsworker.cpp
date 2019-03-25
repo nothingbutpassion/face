@@ -27,6 +27,7 @@ bool DMSWorker::init(const string& modelDir) {
     return true;
 }
 
+
 void DMSWorker::process(Mat& image) {
     vector<Rect> boxes;
     vector<float> confidences;

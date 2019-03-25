@@ -42,6 +42,18 @@ foreach(name in ${OPENCV_LIBS})
             IMPORTED_LOCATION ${OPENCV_LIB_DIR}/lib${name}.so)
 endforeach()
 
+# NOTES:
+# We directly use dlib source, so set the dlib root dir for finding
+set(DLIB_ROOT "D:/share/dlib-19.17")
+#set(DLIB_ROOT "E:/qiujing/code/DmsDemoService/thirdparty/dlib")
+#set(OPENBLAS_ROOT "E:/qiujing/code/DmsDemoService/thirdparty/openblas")
+
+#add_library(dlib SHARED IMPORTED )
+#set_target_properties(dlib PROPERTIES IMPORTED_LOCATION ${DLIB_ROOT}/libs/arm64-v8a/libdlib.so)
+
+#add_library(openblas SHARED IMPORTED )
+#set_target_properties(openblas PROPERTIES IMPORTED_LOCATION ${OPENBLAS_ROOT}/libs/arm64-v8a/libopenblas.so)
+
 # Creates and names a library, sets it as either STATIC
 # or SHARED, and provides the relative paths to its source code.
 # You can define multiple libraries, and CMake builds them for you.
@@ -50,9 +62,12 @@ add_library(face SHARED
         src/main/cpp/nativebuffer_jni.cpp
         src/main/cpp/dmsworker_jni.cpp
         src/main/cpp/dmsworker.cpp
-        src/main/cpp/face_detector.cpp
+        src/main/cpp/hog_face_detector.cpp
+        src/main/cpp/ssd_face_detector.cpp
         src/main/cpp/face_landmark.cpp
-        src/main/cpp/utils.cpp)
+        src/main/cpp/utils.cpp
+        ${DLIB_ROOT}/dlib/all/source.cpp        # for dlib
+        )
 
 # Searches for a specified prebuilt library and stores the path as a
 # variable. Because CMake includes system libraries in the search path by
@@ -65,7 +80,13 @@ add_library(face SHARED
 # NOTES:
 # PRIVATE is necessary, otherwise cmake build issue.
 target_include_directories(face PRIVATE
-        ${OPENCV_INC_DIR})
+        ${OPENCV_INC_DIR}
+        ${DLIB_ROOT}                            # for dlib includes
+        )
+
+target_compile_definitions(face PRIVATE
+        -DDLIB_NO_GUI_SUPPORT                 #  for building dlib with no GUI support
+        )
 
 # Specifies libraries CMake should link to your target library. You
 # can link multiple libraries, such as libraries you define in this
