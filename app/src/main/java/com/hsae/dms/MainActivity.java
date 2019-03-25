@@ -198,9 +198,9 @@ public class MainActivity extends Activity {
 
     public static boolean copyFiles(Context context) {
         String[] assetFiles = new String[] {
-                "lbfmodel.yaml",
-                "res10_300x300_ssd_iter_140000.prototxt",
-                "res10_300x300_ssd_iter_140000.caffemodel"
+                "lbf_face_landmark.yaml",
+                "ssd_face_detector.prototxt",
+                "ssd_face_detector.caffemodel"
         };
         boolean result = true;
         for(String file: assetFiles) {

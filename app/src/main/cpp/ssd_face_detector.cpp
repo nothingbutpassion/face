@@ -21,8 +21,8 @@ static vector<String> getOutputsNames(const dnn::Net& net) {
 }
 
 bool SSDFaceDetector::load(const string& modelDir) {
-    string prototxt = modelDir + "/res10_300x300_ssd_iter_140000.prototxt";
-    string caffeModel = modelDir + "/res10_300x300_ssd_iter_140000.caffemodel";
+    string prototxt = modelDir + "/ssd_face_detector.prototxt";
+    string caffeModel = modelDir + "/ssd_face_detector.caffemodel";
     mFaceNet = dnn::readNetFromCaffe(prototxt, caffeModel);
     if (mFaceNet.empty()) {
         LOGE("failed to load model files: %s, %s", prototxt.c_str(), caffeModel.c_str());
