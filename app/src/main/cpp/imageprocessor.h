@@ -7,7 +7,7 @@
 #include "hog_face_detector.h"
 #include "kazemi_face_landmark.h"
 
-class DMSWorker {
+class ImageProcessor {
 public:
     bool init(const std::string& modelDir);
     void process(cv::Mat& image);

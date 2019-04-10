@@ -5,7 +5,7 @@ android {
         config {
             keyAlias 'dms'
             keyPassword 'yuhao123'
-            storeFile file('D:/share/face/dms.jks')
+            storeFile file('dms.jks')
             storePassword 'yuhao123'
         }
     }
@@ -45,7 +45,7 @@ android {
         main {
             // NOTES:
             // Specify OpenCV libs dir where all .so files packaged to this apk
-            jniLibs.srcDirs 'libs/opencv/libs', 'E:/qiujing/code/DmsDemoService/thirdparty/openblas/libs'
+            jniLibs.srcDirs 'libs/opencv/libs'
             // jniLibs.srcDirs 'libs/opencv/libs', 'E:/qiujing/code/DmsDemoService/thirdparty/dlib/libs', 'E:/qiujing/code/DmsDemoService/thirdparty/openblas/libs'
         }
     }

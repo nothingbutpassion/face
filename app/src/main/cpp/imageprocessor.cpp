@@ -1,6 +1,6 @@
 #import <vector>
 #import <opencv2/opencv.hpp>
-#include "dmsworker.h"
+#include "imageprocessor.h"
 
 using namespace std;
 using namespace cv;
@@ -17,7 +17,7 @@ static void drawDetection(const Mat& frame, float confidence, int left, int top,
     putText(frame, label, Point(left, top), FONT_HERSHEY_SIMPLEX, 0.5, Scalar());
 }
 
-bool DMSWorker::init(const string& modelDir) {
+bool ImageProcessor::init(const string& modelDir) {
     if (!mFaceDetector.load(modelDir)) {
         return false;
     }
@@ -28,7 +28,7 @@ bool DMSWorker::init(const string& modelDir) {
 }
 
 
-void DMSWorker::process(Mat& image) {
+void ImageProcessor::process(Mat& image) {
     vector<Rect> boxes;
     vector<float> confidences;
     mFaceDetector.detect(image, boxes, confidences);

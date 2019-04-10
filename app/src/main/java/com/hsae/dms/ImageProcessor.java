@@ -7,7 +7,7 @@ import android.os.Environment;
 
 import java.nio.ByteBuffer;
 
-public class DMSWorker {
+public class ImageProcessor {
 
     // Native face detector handle
     private long mNativeHandle = 0;

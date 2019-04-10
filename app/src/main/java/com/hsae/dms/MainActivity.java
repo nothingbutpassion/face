@@ -25,7 +25,7 @@ import java.io.InputStream;
 
 public class MainActivity extends Activity {
     private final String TAG = "MainActivity";
-    private DMSWorker mDMSWorker = new DMSWorker();
+    private ImageProcessor mImageProcessor = new ImageProcessor();
     private VideoCapture mVideoCapture = new VideoCapture(MainActivity.this);
 
     private Surface mPreviewSurface;
@@ -83,7 +83,7 @@ public class MainActivity extends Activity {
         surfaceView.getHolder().addCallback(new SurfaceHolder.Callback() {
             @Override
             public void surfaceCreated(SurfaceHolder holder) {
-                mDMSWorker.open();
+                mImageProcessor.open();
                 mPreviewSurface = holder.getSurface();
                 mVideoCapture.setCaptureListener(new VideoCapture.CaptureListener() {
                     @Override
@@ -102,8 +102,8 @@ public class MainActivity extends Activity {
 
                         // Face detection;
                         long t4 = System.currentTimeMillis();
-                        mDMSWorker.process(nativeBuffer);
-                        Log.i(TAG, "DMSWorker.process: " + (System.currentTimeMillis() - t4) + "ms");
+                        mImageProcessor.process(nativeBuffer);
+                        Log.i(TAG, "ImageProcessor.process: " + (System.currentTimeMillis() - t4) + "ms");
 
                         long t5 = System.currentTimeMillis();
                         if (mPreviewSurface != null) {
@@ -122,7 +122,7 @@ public class MainActivity extends Activity {
             @Override
             public void surfaceDestroyed(SurfaceHolder holder) {
                 mVideoCapture.close();
-                mDMSWorker.close();
+                mImageProcessor.close();
                 mPreviewSurface = null;
             }
         });

@@ -60,8 +60,8 @@ set(DLIB_ROOT "D:/share/dlib-19.17")
 # Gradle automatically packages shared libraries with your APK.
 add_library(face SHARED
         src/main/cpp/nativebuffer_jni.cpp
-        src/main/cpp/dmsworker_jni.cpp
-        src/main/cpp/dmsworker.cpp
+        src/main/cpp/imageprocessor_jni.cpp
+        src/main/cpp/imageprocessor.cpp
         src/main/cpp/hog_face_detector.cpp
         src/main/cpp/ssd_face_detector.cpp
         src/main/cpp/lbf_face_landmark.cpp
