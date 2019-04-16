@@ -97,3 +97,14 @@ target_link_libraries(face
         log
         ${OPENCV_LIBS}
         )
+
+# Build test_v4l2_capture
+add_executable(test_v4l2_capture
+        src/main/cpp/test_v4l2_capture.cpp
+        src/main/cpp/v4l2_capture.cpp
+        )
+# The generated test_v4l2_capture is located at app/build/outputs/bin/[Debug\Release]
+set_target_properties(test_v4l2_capture
+        PROPERTIES
+        RUNTIME_OUTPUT_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/build/outputs/bin/${CMAKE_BUILD_TYPE}"
+        )
