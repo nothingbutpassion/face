@@ -88,7 +88,7 @@ bool V4L2Capture::open(int index) {
 }
 
 bool V4L2Capture::open(const char* deviceName) {
-    LOGD("try to open %s ...\n", deviceName);
+    LOGI("try to open %s ...\n", deviceName);
     // O_RDWR is requried, use O_NONBLOCK flag so that we can do select/poll in latter time
     deviceHandle = ::open(deviceName, O_RDWR | O_NONBLOCK, 0);
     if (deviceHandle == -1) {
@@ -101,8 +101,36 @@ bool V4L2Capture::open(const char* deviceName) {
         deviceHandle = -1;
         return false;
     }
-    LOGD("%s is opened\n", deviceName);
+    LOGI("%s is opened\n", deviceName);
     return opened;
+}
+
+bool V4L2Capture::read(void** raw, uint32_t* length) {
+    if (deviceHandle == -1) {
+        LOGE("capture must be opened before calling read()\n");
+        return false;
+    }
+
+    if (bufferIndex >= 0) {
+        // Revert buffer to the queue
+        if (!try_queue_buffer(bufferIndex))
+            LOGE("failed to revert buffer %u to queue\n", bufferIndex);
+        else
+            bufferIndex = -1;
+    }
+    if (!try_dequeue_buffer()) {
+        LOGE("unable to get buffer from queue\n");
+        return false;
+    }
+    if (raw)
+        *raw = buffers[bufferIndex].start;
+    if (length)
+        *length = buffers[bufferIndex].buffer.bytesused;
+    LOGD("got frame: timestamp=%lu, buf=%p, len=%u, width=%u, height=%u, format=%c%c%c%c\n",
+         (1000*buffers[bufferIndex].buffer.timestamp.tv_sec + buffers[bufferIndex].buffer.timestamp.tv_usec/1000),
+         buffers[bufferIndex].start, buffers[bufferIndex].buffer.bytesused, width, height,
+         pixelformat&0xff, (pixelformat>>8)&0xff, (pixelformat>>16)&0xff, (pixelformat>>24)&0xff);
+    return true;
 }
 
 bool V4L2Capture::set(int property, double value) {
@@ -119,21 +147,21 @@ bool V4L2Capture::set(int property, double value) {
                 LOGE("buffer size must be from 1 to %d\n", MAX_BUFFERS);
                 return false;
             }
-            if (propertyValue == numBuffers)
+            if (propertyValue == bufferSize)
                 return true;
-
-            int32_t oldValue = numBuffers;
-            requestBuffers = uint32_t(propertyValue);
-            if (reset_capture() && (numBuffers == propertyValue))
+            int32_t oldValue = bufferSize;
+            requestBufferSize = uint32_t(propertyValue);
+            if (reset_capture() && (bufferSize == propertyValue))
                 return true;
-            if (numBuffers != oldValue) {
-                requestBuffers = oldValue;
+            if (bufferSize != oldValue) {
+                requestBufferSize = oldValue;
                 reset_capture();
             }
+            LOGE("unable to set buffer size as %u\n", propertyValue);
             return false;
         }
 
-        case CAP_PROP_FORMAT:
+        case GAP_PROP_FOURCC:
         {
             if (propertyValue == pixelformat)
                 return true;
@@ -145,47 +173,49 @@ bool V4L2Capture::set(int property, double value) {
                 pixelformat = oldValue;
                 reset_capture();
             }
+            LOGE("unable to set fourcc as %c%c%c%c\n",
+                    propertyValue&0xff, (propertyValue>>8)&0xff, (propertyValue>>16)&0xff, (propertyValue>>24)&0xff);
             return false;
         }
 
         case CAP_PROP_FRAME_WIDTH:
-        {
-            if (propertyValue < 1 || propertyValue > 1920 || propertyValue % 16 != 0) {
-                LOGE("width must be divided by 16 and not greater than 1920\n");
-                return false;
-            }
-            if (propertyValue == width)
-                return true;
-            int32_t oldValue = width;
-            width = propertyValue;
-            if (reset_capture() && width == propertyValue)
-                return true;
-            if (width != propertyValue) {
-                width = propertyValue;
-                reset_capture();
-            }
-            return false;
-        }
-
         case CAP_PROP_FRAME_HEIGHT:
         {
-
             if (propertyValue < 1 || propertyValue > 1920 || propertyValue % 16 != 0) {
-                LOGE("width must be divided by 16 and not greater than 1920\n");
+                LOGE("both width and height must be divided by 16 and not greater than 1920\n");
                 return false;
             }
-            if (propertyValue == height)
+            bool isSettingWidth = (property == CAP_PROP_FRAME_WIDTH);
+            if (isSettingWidth)
+                requestWidth = propertyValue;
+            else
+                requestHeight = propertyValue;
+            // two subsequent calls setting WIDTH and HEIGHT will change the video size
+            if (0 == requestWidth || 0 == requestHeight)
                 return true;
-            int32_t oldValue = height;
-            height = propertyValue;
-            if (reset_capture() && height == propertyValue)
+            if (width == requestWidth && height == requestHeight) {
+                requestWidth = requestHeight = 0;
                 return true;
-            if (height != propertyValue) {
-                height = propertyValue;
+            }
+            uint32_t oldWidth = width;
+            uint32_t oldHeight = height;
+            width = requestWidth;
+            height = requestHeight;
+            if (reset_capture() && width == requestWidth && height == requestHeight) {
+                requestWidth = requestHeight = 0;
+                return true;
+            }
+
+            LOGE("unable to set frame size as %ux%u\n", requestWidth, requestHeight);
+            requestWidth = requestHeight = 0;
+            if (width != oldWidth || height != oldHeight) {
+                width = oldWidth;
+                height = oldHeight;
                 reset_capture();
             }
             return false;
         }
+
         case CAP_PROP_FPS:
         {
             if (propertyValue < 1 || propertyValue > 60) {
@@ -202,6 +232,7 @@ bool V4L2Capture::set(int property, double value) {
                 fps = propertyValue;
                 reset_capture();
             }
+            LOGE("unable to set fps as %u\n",propertyValue);
             return false;
         }
     }
@@ -215,8 +246,8 @@ double V4L2Capture::get(int property) {
     }
     switch (property) {
         case CAP_PROP_BUFFERSIZE:
-            return numBuffers;
-        case CAP_PROP_FORMAT:
+            return bufferSize;
+        case GAP_PROP_FOURCC:
             return pixelformat;
         case CAP_PROP_FRAME_WIDTH:
             return width;
@@ -238,14 +269,14 @@ bool V4L2Capture::init_capture() {
         return false;
     if (!try_set_fps())
         return false;
-    if (!try_request_buffers(requestBuffers))
+    if (!try_request_buffers(requestBufferSize))
         return false;
     if (!try_create_buffers()) {
         try_request_buffers(0);
         return false;
     }
     // We should queue buffers before streaming.
-    for (uint32_t i=0; i < numBuffers; ++i)
+    for (uint32_t i=0; i < bufferSize; ++i)
         try_queue_buffer(i);
     if (!try_set_streaming(true)) {
         try_release_buffers();
@@ -267,7 +298,7 @@ bool V4L2Capture::try_capability() {
         return false;
     }
     if (!(capability.capabilities & V4L2_CAP_VIDEO_CAPTURE)) {
-        fprintf(stderr, "unable to capture video memory.\n");
+        LOGE("unable to capture video memory.\n");
         return false;
     }
     return true;
@@ -276,7 +307,10 @@ bool V4L2Capture::try_capability() {
 bool V4L2Capture::try_ioctl(unsigned long ioctlCode, void* parameter) const {
     while (-1 == ioctl(deviceHandle, ioctlCode, parameter)) {
         if (!(errno == EBUSY || errno == EAGAIN)) {
-            LOGE("ioctl failed: %s\n", str(ioctlCode));
+            if (errno == EINVAL &&  (ioctlCode == VIDIOC_ENUM_FMT || ioctlCode == VIDIOC_ENUM_FRAMESIZES))
+                LOGD("ioctl: %s  failed, %s\n", str(ioctlCode), "invalid index");
+            else
+                LOGE("ioctl: %s  failed\n", str(ioctlCode));
             return false;
         }
         // Poll device
@@ -343,35 +377,29 @@ bool V4L2Capture::try_enum_formats() {
 
 bool V4L2Capture::try_set_format() {
     __u32 try_order[] = {
-//            V4L2_PIX_FMT_BGR24,
+            pixelformat,
             V4L2_PIX_FMT_RGB24,
-//            V4L2_PIX_FMT_YVU420,
             V4L2_PIX_FMT_YUV420,
-//            V4L2_PIX_FMT_YUV411P,
             V4L2_PIX_FMT_YUYV,
             V4L2_PIX_FMT_UYVY,
             V4L2_PIX_FMT_NV12,
             V4L2_PIX_FMT_NV21,
-//            V4L2_PIX_FMT_SBGGR8,
-//            V4L2_PIX_FMT_SGBRG8,
-//            V4L2_PIX_FMT_SN9C10X,
-//            V4L2_PIX_FMT_MJPEG,
             V4L2_PIX_FMT_JPEG,
-//            V4L2_PIX_FMT_Y16,
-//            V4L2_PIX_FMT_GREY
     };
     for (size_t i = 0; i < sizeof(try_order) / sizeof(__u32); i++) {
+        if (0 == try_order[i])
+            continue;
         v4l2_format format = v4l2_format();
         format.type                = V4L2_BUF_TYPE_VIDEO_CAPTURE;
         format.fmt.pix.pixelformat = try_order[i];
         format.fmt.pix.field       = V4L2_FIELD_ANY;
-        format.fmt.pix.width       = DEFAULT_WIDTH;
-        format.fmt.pix.height      = DEFAULT_HEIGHT;
+        format.fmt.pix.width       = width;
+        format.fmt.pix.height      = height;
         if (try_ioctl(VIDIOC_S_FMT, &format) && try_ioctl(VIDIOC_G_FMT, &format)) {
             width = format.fmt.pix.width;
             height = format.fmt.pix.height;
             pixelformat = format.fmt.pix.pixelformat;
-            LOGD("formats: width=%u, height=%u, pixelformat=%c%c%c%c\n",
+            LOGI("formats: width=%u, height=%u, pixelformat=%c%c%c%c\n",
                  width, height, pixelformat&0xff, (pixelformat>>8)&0xff, (pixelformat>>16)&0xff, (pixelformat>>24)&0xff);
             return true;
         }
@@ -383,7 +411,7 @@ bool V4L2Capture::try_set_format() {
         width = format.fmt.pix.width;
         height = format.fmt.pix.height;
         pixelformat = format.fmt.pix.pixelformat;
-        LOGD("format: width=%u, height=%u, pixelformat=%c%c%c%c\n",
+        LOGI("format: width=%u, height=%u, pixelformat=%c%c%c%c\n",
              width, height, pixelformat&0xff, (pixelformat>>8)&0xff, (pixelformat>>16)&0xff, (pixelformat>>24)&0xff);
         return true;
     }
@@ -398,7 +426,7 @@ bool V4L2Capture::try_set_fps() {
     if (!try_ioctl(VIDIOC_S_PARM, &streamparm) || !try_ioctl(VIDIOC_G_PARM, &streamparm))
         return false;
     fps = streamparm.parm.capture.timeperframe.denominator;
-    LOGD("fps: %u\n", fps);
+    LOGI("fps: %u\n", fps);
     return true;
 }
 
@@ -406,16 +434,16 @@ bool V4L2Capture::try_set_streaming(bool on) {
     int type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
     if (!try_ioctl(on ? VIDIOC_STREAMON : VIDIOC_STREAMOFF, &type))
         return false;
-    LOGD("streaming: %s\n", on ? "on":"off");
+    LOGI("streaming: %s\n", on ? "on":"off");
     return true;
 }
 
 bool V4L2Capture::try_request_buffers(uint32_t nums) {
-    numBuffers = nums;
+    bufferSize = nums;
     // Release the buffers already allocated
-    if (0 == numBuffers) {
+    if (0 == bufferSize) {
         v4l2_requestbuffers req = v4l2_requestbuffers();
-        req.count = numBuffers;
+        req.count = bufferSize;
         req.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
         req.memory = V4L2_MEMORY_MMAP;
         if (!try_ioctl(VIDIOC_REQBUFS, &req)) {
@@ -424,14 +452,14 @@ bool V4L2Capture::try_request_buffers(uint32_t nums) {
             }
             return false;
         }
-        numBuffers = req.count;
-        LOGD("buffers: %u\n", numBuffers);
+        bufferSize = req.count;
+        LOGI("buffers: %u\n", bufferSize);
         return true;
     }
     // Request allocating buffers
-    while (numBuffers > 0) {
+    while (bufferSize > 0) {
         v4l2_requestbuffers req = v4l2_requestbuffers();
-        req.count = numBuffers;
+        req.count = bufferSize;
         req.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
         req.memory = V4L2_MEMORY_MMAP;
         if (!try_ioctl(VIDIOC_REQBUFS, &req)) {
@@ -440,23 +468,23 @@ bool V4L2Capture::try_request_buffers(uint32_t nums) {
             }
             return false;
         }
-        if (req.count >= numBuffers) {
-            numBuffers = req.count;
+        if (req.count >= bufferSize) {
+            bufferSize = req.count;
             break;
         }
-        numBuffers -= 1;
+        bufferSize -= 1;
         LOGE("insufficient buffer memory, decrease buffers\n");
     }
-    if (numBuffers < 1) {
+    if (bufferSize < 1) {
         LOGE("insufficient buffer memory\n");
         return false;
     }
-    LOGD("buffers: %u\n", numBuffers);
+    LOGI("buffers: %u\n", bufferSize);
     return true;
 }
 
 bool V4L2Capture::try_create_buffers() {
-    for (uint32_t i=0; i < numBuffers; ++i) {
+    for (uint32_t i=0; i < bufferSize; ++i) {
         v4l2_buffer buf = v4l2_buffer();
         buf.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
         buf.memory = V4L2_MEMORY_MMAP;
@@ -482,11 +510,12 @@ bool V4L2Capture::try_create_buffers() {
 }
 
 bool V4L2Capture::try_release_buffers() {
-    for (int i=0; i < numBuffers; ++i) {
+    for (int i=0; i < bufferSize; ++i) {
         if (-1 == ::munmap(buffers[i].start, buffers[i].length)) {
             LOGE("munmap failed: %s\n", strerror(errno));
         }
     }
+    bufferIndex = -1;
     // Applications can call ioctl VIDIOC_REQBUFS again to change the number of buffers,
     // however this cannot succeed when any buffers are still mapped. A count value of zero
     // frees all buffers, after aborting or finishing any DMA in progress, an implicit VIDIOC_STREAMOFF.
@@ -496,23 +525,22 @@ bool V4L2Capture::try_release_buffers() {
 bool V4L2Capture::try_queue_buffer(uint32_t index) {
     if (!try_ioctl(VIDIOC_QBUF, &buffers[index].buffer))
         return false;
-
     LOGD("queue buffer: %u\n", index);
     return true;
 }
 
-bool V4L2Capture::try_dequeue_buffer(uint32_t& index) {
+bool V4L2Capture::try_dequeue_buffer() {
     v4l2_buffer buf = v4l2_buffer();
     buf.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
     buf.memory = V4L2_MEMORY_MMAP;
     if (!try_ioctl(VIDIOC_DQBUF, &buf))
         return false;
 
-    assert(buf.index < numBuffers);
+    assert(buf.index < bufferSize);
     assert(buffers[buf.index].length == buf.length);
 
     // We shouldn't use this buffer in the queue while not retrieve frame from it.
     buffers[buf.index].buffer = buf;
-    index = buf.index;
+    bufferIndex = buf.index;
     return true;
 }
