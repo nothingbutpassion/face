@@ -4,7 +4,7 @@
 #include <string>
 #include <opencv2/core.hpp>
 
-#include "hog_face_detector.h"
+#include "hao_face_detector.h"
 #include "kazemi_face_landmark.h"
 
 class ImageProcessor {
@@ -13,7 +13,7 @@ public:
     void process(cv::Mat& image);
 
 private:
-    HOGFaceDetector mFaceDetector;
+    HaoFaceDetector mFaceDetector;
     KazemiFaceLandmark mFaceLandmark;
 };
 

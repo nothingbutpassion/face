@@ -45,7 +45,7 @@ android {
         main {
             // NOTES:
             // Specify OpenCV libs dir where all .so files packaged to this apk
-            jniLibs.srcDirs 'libs/opencv/libs'
+            jniLibs.srcDirs 'libs/opencv/libs', 'libs/tflite/libs'
             // jniLibs.srcDirs 'libs/opencv/libs', 'E:/qiujing/code/DmsDemoService/thirdparty/dlib/libs', 'E:/qiujing/code/DmsDemoService/thirdparty/openblas/libs'
         }
     }

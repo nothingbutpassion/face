@@ -47,12 +47,20 @@ endforeach()
 set(DLIB_ROOT "D:/share/dlib-19.17")
 #set(DLIB_ROOT "E:/qiujing/code/DmsDemoService/thirdparty/dlib")
 #set(OPENBLAS_ROOT "E:/qiujing/code/DmsDemoService/thirdparty/openblas")
-
 #add_library(dlib SHARED IMPORTED )
 #set_target_properties(dlib PROPERTIES IMPORTED_LOCATION ${DLIB_ROOT}/libs/arm64-v8a/libdlib.so)
-
 #add_library(openblas SHARED IMPORTED )
 #set_target_properties(openblas PROPERTIES IMPORTED_LOCATION ${OPENBLAS_ROOT}/libs/arm64-v8a/libopenblas.so)
+
+# NOTES:
+# tensorflow lite head file research dir
+set(TFLITE_INC_DIR "D:/share/tensorflow")
+set(FLATBUFFER_INC_DIR "libs/flatbuffer/include")
+add_library(tensorflowlite SHARED IMPORTED )
+set_target_properties(tensorflowlite PROPERTIES
+        IMPORTED_LOCATION "${CMAKE_CURRENT_SOURCE_DIR}/libs/tflite/libs/${ANDROID_ABI}/libtensorflowlite.so")
+
+
 
 # Creates and names a library, sets it as either STATIC
 # or SHARED, and provides the relative paths to its source code.
@@ -64,6 +72,7 @@ add_library(face SHARED
         src/main/cpp/imageprocessor.cpp
         src/main/cpp/hog_face_detector.cpp
         src/main/cpp/ssd_face_detector.cpp
+        src/main/cpp/hao_face_detector.cpp
         src/main/cpp/lbf_face_landmark.cpp
         src/main/cpp/kazemi_face_landmark.cpp
         src/main/cpp/utils.cpp
@@ -83,6 +92,8 @@ add_library(face SHARED
 target_include_directories(face PRIVATE
         ${OPENCV_INC_DIR}
         ${DLIB_ROOT}                            # for dlib includes
+        ${TFLITE_INC_DIR}                      # for tensorflow lite
+        ${FLATBUFFER_INC_DIR}                 # for flatbuffer referenced by tensorflow lite
         )
 
 target_compile_definitions(face PRIVATE
@@ -96,6 +107,7 @@ target_link_libraries(face
         android
         log
         ${OPENCV_LIBS}
+        tensorflowlite
         )
 
 # Build test_v4l2_capture
