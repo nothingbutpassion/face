@@ -4,8 +4,9 @@
 #include <string>
 #include <opencv2/core.hpp>
 
-#include "hao_face_detector.h"
+#include "hog_face_detector.h"
 #include "kazemi_face_landmark.h"
+#include "simple_pose_estimator.h"
 
 class ImageProcessor {
 public:
@@ -13,8 +14,9 @@ public:
     void process(cv::Mat& image);
 
 private:
-    HaoFaceDetector mFaceDetector;
+    HOGFaceDetector mFaceDetector;
     KazemiFaceLandmark mFaceLandmark;
+    SimplePoseEstimator mPoseEstimator;
 };
 
 

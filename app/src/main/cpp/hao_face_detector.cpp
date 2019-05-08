@@ -111,17 +111,22 @@ static vector<int> nms(const vector<Rect>& boxes, const vector<float>& scores, f
 
 void HaoFaceDetector::detect(const Mat& image, vector<Rect>& objects, vector<float>& confidences) {
     // Prepare for inputs
+    int64_t t = getTickCount();
     Mat input;
     resize(image, input, Size(160,160));
     cvtColor(input, input, COLOR_RGBA2RGB);
     input.convertTo(input, CV_32F, 1/255.0, -0.5);
     TfLiteTensor* inputTensor = mInterpreter->tensor(mInterpreter->inputs()[0]);
     memcpy(inputTensor->data.f, input.data, 160*160*3*4);
+    LOGI("Prepare inputs: %dms", int(double(getTickCount()-t)*1000/getTickFrequency()));
 
     // Do forward pass inference
+    t = getTickCount();
     mInterpreter->Invoke();
+    LOGI("Invoke inference: %dms", int(double(getTickCount()-t)*1000/getTickFrequency()));
 
     // Get outputs
+    t = getTickCount();
     TfLiteTensor* outputTensor = mInterpreter->tensor(mInterpreter->outputs()[0]);
     float* detection = outputTensor->data.f;
     int numBoxes = outputTensor->dims->data[1];
@@ -156,5 +161,6 @@ void HaoFaceDetector::detect(const Mat& image, vector<Rect>& objects, vector<flo
         objects.push_back(faces[indexes[i]]);
         confidences.push_back(scores[indexes[i]]);
     }
+    LOGI("Got outputs: %dms", int(double(getTickCount()-t)*1000/getTickFrequency()));
 }
 

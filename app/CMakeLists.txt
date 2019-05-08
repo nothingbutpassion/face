@@ -34,7 +34,7 @@ cmake_minimum_required(VERSION 3.4.1)
 # ${ANDROID_ABI} is set by gradle. see .externalNativeBuild/cmake/<debug or release>/<abi>/cmake_build_command.txt
 set(OPENCV_INC_DIR "${CMAKE_CURRENT_SOURCE_DIR}/libs/opencv/include")
 set(OPENCV_LIB_DIR "${CMAKE_CURRENT_SOURCE_DIR}/libs/opencv/libs/${ANDROID_ABI}")
-set(OPENCV_LIBS  opencv_core opencv_imgproc opencv_imgcodecs opencv_dnn opencv_face)
+set(OPENCV_LIBS  opencv_core opencv_imgproc opencv_imgcodecs opencv_dnn opencv_face opencv_calib3d)
 
 foreach(name in ${OPENCV_LIBS})
     add_library(${name} SHARED IMPORTED )
@@ -53,28 +53,27 @@ set(DLIB_ROOT "D:/share/dlib-19.17")
 #set_target_properties(openblas PROPERTIES IMPORTED_LOCATION ${OPENBLAS_ROOT}/libs/arm64-v8a/libopenblas.so)
 
 # NOTES:
-# tensorflow lite head file research dir
+# tensorflow lite head files research dirs include <tensorflow-source-root-dir> and <flatbuffer-include-dir>
 set(TFLITE_INC_DIR "D:/share/tensorflow")
 set(FLATBUFFER_INC_DIR "libs/flatbuffer/include")
 add_library(tensorflowlite SHARED IMPORTED )
 set_target_properties(tensorflowlite PROPERTIES
         IMPORTED_LOCATION "${CMAKE_CURRENT_SOURCE_DIR}/libs/tflite/libs/${ANDROID_ABI}/libtensorflowlite.so")
 
-
-
 # Creates and names a library, sets it as either STATIC
 # or SHARED, and provides the relative paths to its source code.
 # You can define multiple libraries, and CMake builds them for you.
 # Gradle automatically packages shared libraries with your APK.
 add_library(face SHARED
-        src/main/cpp/nativebuffer_jni.cpp
-        src/main/cpp/imageprocessor_jni.cpp
-        src/main/cpp/imageprocessor.cpp
+        src/main/cpp/native_buffer_jni.cpp
+        src/main/cpp/image_processor_jni.cpp
+        src/main/cpp/image_processor.cpp
         src/main/cpp/hog_face_detector.cpp
         src/main/cpp/ssd_face_detector.cpp
         src/main/cpp/hao_face_detector.cpp
         src/main/cpp/lbf_face_landmark.cpp
         src/main/cpp/kazemi_face_landmark.cpp
+        src/main/cpp/simple_pose_estimator.cpp
         src/main/cpp/utils.cpp
         ${DLIB_ROOT}/dlib/all/source.cpp        # for dlib
         )

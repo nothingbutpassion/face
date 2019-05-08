@@ -1,7 +1,7 @@
 #include <opencv2/core.hpp>
 #include "utils.h"
-#include "imageprocessor.h"
-#include "imageprocessor_jni.h"
+#include "image_processor.h"
+#include "image_processor_jni.h"
 
 using namespace cv;
 

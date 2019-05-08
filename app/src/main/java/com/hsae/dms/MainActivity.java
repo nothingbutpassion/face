@@ -202,7 +202,7 @@ public class MainActivity extends Activity {
 //                "lbf_face_landmark.yaml",
 //                "ssd_face_detector.prototxt",
 //                "ssd_face_detector.caffemodel"
-                "hao_face_detector.tflite"
+//                "hao_face_detector.tflite"
         };
         boolean result = true;
         for(String file: assetFiles) {

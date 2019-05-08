@@ -5,8 +5,6 @@
 #include <vector>
 #include <dlib/image_processing/frontal_face_detector.h>
 
-#include "hog_face_detector.h"
-
 class HOGFaceDetector {
 public:
     bool load(const std::string& modelDir);

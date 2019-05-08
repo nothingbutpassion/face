@@ -1,4 +1,4 @@
-#include "nativebuffer_jni.h"
+#include "native_buffer_jni.h"
 #include <android/native_window_jni.h>
 #include <android/native_window.h>
 #include <opencv2/core.hpp>
