@@ -219,7 +219,8 @@ public class VideoCapture {
             imageReader.setOnImageAvailableListener(new ImageReader.OnImageAvailableListener() {
                 @Override
                 public void onImageAvailable(ImageReader reader) {
-                    Image image = reader.acquireNextImage();
+                    // Image image = reader.acquireNextImage();
+                    Image image = reader.acquireLatestImage();
                     if (image != null) {
                         if (mCaptureListener != null) {
                             mCaptureListener.onCaptured(image);

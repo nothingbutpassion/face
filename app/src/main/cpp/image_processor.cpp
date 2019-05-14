@@ -30,13 +30,13 @@ static void drawPoses(Mat& image, const vector<Point3f>& poses) {
     Point3f eulerAngle = poses[0];
     stringstream outtext;
     outtext << "X: " << std::setprecision(3) << eulerAngle.x;
-    cv::putText(image, outtext.str(), cv::Point(50, 40), cv::FONT_HERSHEY_SIMPLEX, 0.75, cv::Scalar(255, 0, 0));
+    cv::putText(image, outtext.str(), cv::Point(20, 40), cv::FONT_HERSHEY_SIMPLEX, 0.75, cv::Scalar(255, 0, 0));
     outtext.str("");
     outtext << "Y: " << std::setprecision(3) << eulerAngle.y;
-    cv::putText(image, outtext.str(), cv::Point(50, 60), cv::FONT_HERSHEY_SIMPLEX, 0.75, cv::Scalar(0, 255, 0));
+    cv::putText(image, outtext.str(), cv::Point(20, 60), cv::FONT_HERSHEY_SIMPLEX, 0.75, cv::Scalar(0, 255, 0));
     outtext.str("");
     outtext << "Z: " << std::setprecision(3) << eulerAngle.z;
-    cv::putText(image, outtext.str(), cv::Point(50, 80), cv::FONT_HERSHEY_SIMPLEX, 0.75, cv::Scalar(0, 0, 255));
+    cv::putText(image, outtext.str(), cv::Point(20, 80), cv::FONT_HERSHEY_SIMPLEX, 0.75, cv::Scalar(0, 0, 255));
     outtext.str("");
 }
 
