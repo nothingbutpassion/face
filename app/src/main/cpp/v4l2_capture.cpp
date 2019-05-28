@@ -44,6 +44,8 @@ static inline const char* str(unsigned long ioctlCode) {
             return "VIDIOC_ENUM_FMT";
         case VIDIOC_ENUM_FRAMESIZES:
             return "VIDIOC_ENUM_FRAMESIZES";
+        case VIDIOC_ENUMINPUT:
+            return "VIDIOC_ENUMINPUT";
     }
     return "UNKNOWN_IOCODE";
 }
@@ -228,11 +230,31 @@ bool V4L2Capture::set(int property, double value) {
             fps = propertyValue;
             if (reset_capture() && fps == propertyValue)
                 return true;
-            if (fps != propertyValue) {
-                fps = propertyValue;
+            if (fps != oldValue) {
+                fps = oldValue;
                 reset_capture();
             }
             LOGE("unable to set fps as %u\n",propertyValue);
+            return false;
+        }
+
+        case CAP_PROP_CHANNEL:
+        {
+            if (propertyValue < 0 || propertyValue > 256) {
+                LOGE("input channel must be from 0 to 256\n");
+                return false;
+            }
+            if (propertyValue == inputChannel)
+                return true;
+            int32_t oldValue = inputChannel;
+            inputChannel = propertyValue;
+            if (reset_capture() && inputChannel == propertyValue)
+                return true;
+            if (inputChannel != oldValue) {
+                inputChannel = oldValue;
+                reset_capture();
+            }
+            LOGE("unable to set input channel as %u\n",propertyValue);
             return false;
         }
     }
@@ -255,6 +277,8 @@ double V4L2Capture::get(int property) {
             return height;
         case CAP_PROP_FPS:
             return fps;
+        case CAP_PROP_CHANNEL:
+            return inputChannel;
     }
     LOGE("unsupported getting property: %d\n", property);
     return 0;
@@ -262,6 +286,10 @@ double V4L2Capture::get(int property) {
 
 bool V4L2Capture::init_capture() {
     if (!try_capability())
+        return false;
+    if (!try_emum_inputs())
+        return false;
+    if (!try_set_input())
         return false;
     if (!try_enum_formats())
         return false;
@@ -307,7 +335,7 @@ bool V4L2Capture::try_capability() {
 bool V4L2Capture::try_ioctl(unsigned long ioctlCode, void* parameter) const {
     while (-1 == ioctl(deviceHandle, ioctlCode, parameter)) {
         if (!(errno == EBUSY || errno == EAGAIN)) {
-            if (errno == EINVAL &&  (ioctlCode == VIDIOC_ENUM_FMT || ioctlCode == VIDIOC_ENUM_FRAMESIZES))
+            if (errno == EINVAL &&  (ioctlCode == VIDIOC_ENUM_FMT || ioctlCode == VIDIOC_ENUM_FRAMESIZES || ioctlCode == VIDIOC_ENUMINPUT))
                 LOGD("ioctl: %s  failed, %s\n", str(ioctlCode), "invalid index");
             else
                 LOGE("ioctl: %s  failed\n", str(ioctlCode));
@@ -342,7 +370,7 @@ bool V4L2Capture::try_enum_formats() {
     fmtdesc.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
     while (try_ioctl(VIDIOC_ENUM_FMT, &fmtdesc)) {
         status = true;
-        LOGD("pixelformat: %c%c%c%c, description: %s\n",
+        LOGI("pixelformat: %c%c%c%c, description: %s\n",
                 fmtdesc.pixelformat & 0xff,
                 (fmtdesc.pixelformat >> 8) & 0xff,
                 (fmtdesc.pixelformat >> 16) & 0xff,
@@ -354,15 +382,15 @@ bool V4L2Capture::try_enum_formats() {
         frmsize.pixel_format = fmtdesc.pixelformat;
         while (try_ioctl(VIDIOC_ENUM_FRAMESIZES, &frmsize)) {
             if (frmsize.type == V4L2_FRMSIZE_TYPE_DISCRETE) {
-                LOGD("discrete: width=%u, height=%u\n", frmsize.discrete.width, frmsize.discrete.height);
+                LOGI("discrete: width=%u, height=%u\n", frmsize.discrete.width, frmsize.discrete.height);
                 // get next available frame size
                 frmsize.index++;
             } else if (frmsize.type == V4L2_FRMSIZE_TYPE_CONTINUOUS) {
-                printf("continuous: min_width=%u, min_height=%u, max_width=%u, max_height=%u\n",
+                LOGI("continuous: min_width=%u, min_height=%u, max_width=%u, max_height=%u\n",
                        frmsize.stepwise.min_width, frmsize.stepwise.min_height, frmsize.stepwise.max_width, frmsize.stepwise.max_height);
                 break;
             } else if (frmsize.type == V4L2_FRMSIZE_TYPE_STEPWISE) {
-                printf("stepwise: min_width=%u, min_height=%u, max_width=%u, max_height=%u, step_width=%u, step_height=%u\n",
+                LOGI("stepwise: min_width=%u, min_height=%u, max_width=%u, max_height=%u, step_width=%u, step_height=%u\n",
                        frmsize.stepwise.min_width, frmsize.stepwise.min_height,
                        frmsize.stepwise.max_width, frmsize.stepwise.max_height,
                        frmsize.stepwise.step_width, frmsize.stepwise.step_height);
@@ -373,6 +401,25 @@ bool V4L2Capture::try_enum_formats() {
         fmtdesc.index++;
     }
     return  status;
+}
+
+bool V4L2Capture::try_emum_inputs() {
+    bool status = false;
+    v4l2_input input = v4l2_input();
+    input.index = 0;
+    while (try_ioctl(VIDIOC_ENUMINPUT, &input)) {
+        status = true;
+        LOGI("input： %u\n", input.index);
+        input.index++;
+    }
+    return status;
+}
+
+bool V4L2Capture::try_set_input() {
+    v4l2_input input = v4l2_input();
+    input.index = inputChannel;
+    try_ioctl(VIDIOC_S_INPUT, &input);
+    return try_ioctl(VIDIOC_G_INPUT, &inputChannel);
 }
 
 bool V4L2Capture::try_set_format() {

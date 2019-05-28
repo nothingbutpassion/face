@@ -22,7 +22,7 @@
 // Usage: v4l2_fourcc('Y','U','Y','V') is equal to V4L2_PIX_FMT_YUYV that defined in linux/videodev2.h
 // linux/videodev2.h should have include this macro
 #ifndef v4l2_fourcc
-#define v4l2_fourcc(a,b,c,d) ((uint32_t) (a) | ((uint32_t) (b) << 8) | ((uint32_t) (c) << 16) | ((uint32_t) (d) << 24))
+#define v4l2_fourcc(a,b,c,d) ((uint32_t) (a) | ((uint32_t) (b) << 8) | ((uint32_t) (c) << 16) | ((uint32_t) (d) << 2
 #endif
 
 constexpr uint32_t MAX_CAMERAS      = 16;
@@ -39,7 +39,8 @@ public:
         CAP_PROP_FRAME_WIDTH,
         CAP_PROP_FRAME_HEIGHT,
         CAP_PROP_FPS,
-        CAP_PROP_BUFFERSIZE
+        CAP_PROP_BUFFERSIZE,
+        CAP_PROP_CHANNEL
     };
 
     V4L2Capture();
@@ -59,6 +60,8 @@ private:
     bool try_capability();
     bool try_ioctl(unsigned long ioctlCode, void* parameter) const;
     bool try_enum_formats();
+    bool try_emum_inputs();
+    bool try_set_input();
     bool try_set_format();
     bool try_set_fps();
     bool try_set_streaming(bool on);
@@ -71,6 +74,7 @@ private:
 private:
     bool opened = false;
     int deviceHandle = -1;
+    uint32_t inputChannel = 0;
     uint32_t pixelformat = 0;
     uint32_t width  = DEFAULT_WIDTH;
     uint32_t height = DEFAULT_HEIGHT;
