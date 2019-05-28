@@ -25,7 +25,7 @@
 #define v4l2_fourcc(a,b,c,d) ((uint32_t) (a) | ((uint32_t) (b) << 8) | ((uint32_t) (c) << 16) | ((uint32_t) (d) << 24))
 #endif
 
-constexpr uint32_t MAX_CAMERAS      = 10;
+constexpr uint32_t MAX_CAMERAS      = 16;
 constexpr uint32_t MAX_BUFFERS      = 8;
 constexpr uint32_t DEFAULT_BUFFERS  = 4;
 constexpr uint32_t DEFAULT_WIDTH    = 640;
