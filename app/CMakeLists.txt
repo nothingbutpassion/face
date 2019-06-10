@@ -90,8 +90,8 @@ add_library(face SHARED
 # PRIVATE is necessary, otherwise cmake build issue.
 target_include_directories(face PRIVATE
         ${OPENCV_INC_DIR}
-        ${DLIB_ROOT}                            # for dlib includes
-        ${TFLITE_INC_DIR}                      # for tensorflow lite
+        ${DLIB_ROOT}                          # for dlib includes
+        ${TFLITE_INC_DIR}                     # for tensorflow lite
         ${FLATBUFFER_INC_DIR}                 # for flatbuffer referenced by tensorflow lite
         )
 

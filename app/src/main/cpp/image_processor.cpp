@@ -19,9 +19,19 @@ static void drawBoxes(const Mat& frame, float confidence, int left, int top, int
 }
 
 static void drawLandmarks(Mat& image, const vector<Rect>& boxes, const vector<vector<Point2f>>& landmarks) {
+//    vector<Scalar> colors(68);
+//    for (int i=0; i <= 16; ++i) colors[i] =  CV_RGB(255,0,0);  // 0 - 16 is profile      17 points
+//    for (int i=17; i <= 21; ++i) colors[i] = CV_RGB(255,0,0);  // 17 - 21 left eyebrow    5 points
+//    for (int i=22; i <= 26; ++i) colors[i] = CV_RGB(255,0,0);  // 22 - 26 right eyebrow   5 points
+//    for (int i=27; i <= 30; ++i) colors[i] = CV_RGB(255,0,0);  // 27 - 30 nose bridge     4 points
+//    for (int i=31; i <= 35; ++i) colors[i] = CV_RGB(255,0,0);  // 31 - 35 nose hole       5 points
+//    for (int i=36; i <= 41; ++i) colors[i] = CV_RGB(0,0,255);    // 36 - 41 left eye        6 points
+//    for (int i=42; i <= 47; ++i) colors[i] = CV_RGB(0,0,255);    // 42 - 47 right eye       6 points
+//    for (int i=48; i <= 67; ++i) colors[i] = CV_RGB(255,0,0);    // 48 - 67 mouth           20 points
     for (int i=0; i < boxes.size(); ++i){
         for (int j = 0; j < landmarks[i].size(); ++j) {
             circle(image, landmarks[i][j], 2, CV_RGB(255, 0, 0), -1);
+            //circle(image, landmarks[i][j], 2, colors[j], -1);
         }
     }
 }

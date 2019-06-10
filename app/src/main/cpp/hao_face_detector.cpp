@@ -67,9 +67,10 @@ static Rect2f getDefaultBox(int index) {
         index -= nums[i-1];
     int rows = sizes[i];
     int cols = rows;
-    int y = index/(3*cols);
-    int x = (index - y*3*cols)/3;
-    int k = index - y*3*cols - x*3;
+    int num_aspects = sizeof(aspects)/sizeof(aspects[0]);
+    int y = index/(num_aspects*cols);
+    int x = (index - y*num_aspects*cols)/num_aspects;
+    int k = index - y*num_aspects*cols - x*num_aspects;
     return Rect2f((x+0.5)/cols, (y+0.5)/rows, scales[i]*sqrt(aspects[k]), scales[i]/sqrt(aspects[k]));
 }
 
