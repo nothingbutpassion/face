@@ -46,6 +46,10 @@ static inline const char* str(unsigned long ioctlCode) {
             return "VIDIOC_ENUM_FRAMESIZES";
         case VIDIOC_ENUMINPUT:
             return "VIDIOC_ENUMINPUT";
+        case VIDIOC_S_INPUT:
+            return "VIDIOC_S_INPUT";
+        case VIDIOC_G_INPUT:
+            return "VIDIOC_G_INPUT";
     }
     return "UNKNOWN_IOCODE";
 }
@@ -368,7 +372,7 @@ bool V4L2Capture::try_enum_formats() {
     v4l2_fmtdesc fmtdesc = v4l2_fmtdesc();
     fmtdesc.index = 0;
     fmtdesc.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
-    while (try_ioctl(VIDIOC_ENUM_FMT, &fmtdesc)) {
+    while (try_ioctl(VIDIOC_ENUM_FMT, &fmtdesc) && fmtdesc.index < 256) {
         status = true;
         LOGI("pixelformat: %c%c%c%c, description: %s\n",
                 fmtdesc.pixelformat & 0xff,
@@ -380,7 +384,7 @@ bool V4L2Capture::try_enum_formats() {
         v4l2_frmsizeenum frmsize = v4l2_frmsizeenum();
         frmsize.index = 0;
         frmsize.pixel_format = fmtdesc.pixelformat;
-        while (try_ioctl(VIDIOC_ENUM_FRAMESIZES, &frmsize)) {
+        while (try_ioctl(VIDIOC_ENUM_FRAMESIZES, &frmsize) && frmsize.index < 256) {
             if (frmsize.type == V4L2_FRMSIZE_TYPE_DISCRETE) {
                 LOGI("discrete: width=%u, height=%u\n", frmsize.discrete.width, frmsize.discrete.height);
                 // get next available frame size
@@ -407,7 +411,7 @@ bool V4L2Capture::try_emum_inputs() {
     bool status = false;
     v4l2_input input = v4l2_input();
     input.index = 0;
-    while (try_ioctl(VIDIOC_ENUMINPUT, &input)) {
+    while (try_ioctl(VIDIOC_ENUMINPUT, &input) && input.index < 256) {
         status = true;
         LOGI("input： %u\n", input.index);
         input.index++;
