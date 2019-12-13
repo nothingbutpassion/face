@@ -69,9 +69,9 @@ add_library(face SHARED
         src/main/cpp/image_processor_jni.cpp
         src/main/cpp/image_processor.cpp
         src/main/cpp/hog_face_detector.cpp
-        src/main/cpp/ssd_face_detector.cpp
-        src/main/cpp/hao_face_detector.cpp
-        src/main/cpp/lbf_face_landmark.cpp
+#        src/main/cpp/ssd_face_detector.cpp
+#        src/main/cpp/hao_face_detector.cpp
+#        src/main/cpp/lbf_face_landmark.cpp
         src/main/cpp/kazemi_face_landmark.cpp
         src/main/cpp/simple_pose_estimator.cpp
         src/main/cpp/utils.cpp
@@ -109,13 +109,10 @@ target_link_libraries(face
         tensorflowlite
         )
 
-# Build test_v4l2_capture
-add_executable(test_v4l2_capture
-        src/main/cpp/test_v4l2_capture.cpp
-        src/main/cpp/v4l2_capture.cpp
-        )
-# The generated test_v4l2_capture is located at app/build/outputs/bin/[Debug\Release]
-set_target_properties(test_v4l2_capture
-        PROPERTIES
-        RUNTIME_OUTPUT_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/build/outputs/bin/${CMAKE_BUILD_TYPE}"
+add_custom_command(
+        TARGET face PRE_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy
+                ${CMAKE_CURRENT_SOURCE_DIR}/models/kazemi_face_landmark.dat
+                ${CMAKE_CURRENT_SOURCE_DIR}/src/main/assets/kazemi_face_landmark.dat
+#        COMMAND <others commands>
         )
