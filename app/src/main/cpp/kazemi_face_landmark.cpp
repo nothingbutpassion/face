@@ -5,7 +5,6 @@
 #include "utils.h"
 #include "kazemi_face_landmark.h"
 
-#undef  LOG_TAG
 #define LOG_TAG "LBFFaceLandmark"
 
 using namespace std;

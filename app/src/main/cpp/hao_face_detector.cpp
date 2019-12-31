@@ -4,7 +4,6 @@
 #include "utils.h"
 #include "hao_face_detector.h"
 
-#undef  LOG_TAG
 #define LOG_TAG "HaoFaceDetector"
 
 using namespace std;

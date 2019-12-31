@@ -6,7 +6,6 @@
 using namespace std;
 using namespace cv;
 
-#undef  LOG_TAG
 #define LOG_TAG "SimplePoseEstimator"
 
 // NOTES:

@@ -72,6 +72,7 @@ add_library(face SHARED
 #        src/main/cpp/ssd_face_detector.cpp
 #        src/main/cpp/hao_face_detector.cpp
 #        src/main/cpp/lbf_face_landmark.cpp
+        src/main/cpp/resnet_face_descriptor.cpp
         src/main/cpp/kazemi_face_landmark.cpp
         src/main/cpp/simple_pose_estimator.cpp
         src/main/cpp/utils.cpp
