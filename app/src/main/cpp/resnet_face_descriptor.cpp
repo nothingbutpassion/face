@@ -81,7 +81,7 @@ dlib::matrix<float,0,1> ResnetFaceDescriptor::extract(const cv::Mat& image, cons
     full_object_detection shape(rect, parts);
 
     std::vector<matrix<rgb_pixel>> face_chips(1);
-    dlib::cv_image<uchar> cimg(rgb);
+    dlib::cv_image<rgb_pixel> cimg(rgb);
     extract_image_chip(cimg, get_face_chip_details(shape,150,0.25), face_chips[0]);
     anet_type& net = *static_cast<anet_type*>(mResNet);
     std::vector<matrix<float,0,1>> face_descriptors = net(face_chips);

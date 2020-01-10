@@ -10,6 +10,7 @@
 
 class ImageProcessor {
 public:
+    ~ImageProcessor();
     bool init(const std::string& modelDir);
     void process(cv::Mat& image);
 

@@ -1,7 +1,15 @@
-#import <vector>
+#include <unistd.h>
+#include <vector>
 #include <sstream>
-#import <opencv2/opencv.hpp>
+#include <thread>
+#include <mutex>
+#include <opencv2/opencv.hpp>
+#include <unistd.h>
 #include "image_processor.h"
+#include "resnet_face_descriptor.h"
+#include "utils.h"
+
+#define LOG_TAG "ImageProcessor"
 
 using namespace std;
 using namespace cv;
@@ -50,6 +58,60 @@ static void drawPoses(Mat& image, const vector<Point3f>& poses) {
     outtext.str("");
 }
 
+static void drawDistance(Mat& image, float distance) {
+    stringstream outtext;
+    outtext << "D: " << std::setprecision(3) << distance;
+    cv::putText(image, outtext.str(), cv::Point(20, 100), cv::FONT_HERSHEY_SIMPLEX, 0.75, cv::Scalar(255, 0, 0));
+}
+
+
+ResnetFaceDescriptor faceDescriptor;
+thread recThread;
+mutex recMutex;
+Mat rgbaImage;
+Rect faceBox;
+vector<Point2f> faceLandmarks;
+float faceDistance = 0;
+bool recExit = false;
+
+void recognize() {
+    while (!recExit) {
+        Mat img;
+        Rect box;
+        vector<Point2f> landmarks;
+
+        recMutex.lock();
+        img = rgbaImage;
+        rgbaImage = Mat();
+        box = faceBox;
+        landmarks = faceLandmarks;
+        recMutex.unlock();
+
+        if (!img.data) {
+            usleep(3000);
+            continue;
+        }
+
+        static dlib::matrix<float,0,1> lastDescriptor;
+
+        LOGD("face recongnition start");
+        dlib::matrix<float,0,1> descriptor = faceDescriptor.extract(img, box, landmarks);
+        LOGD("face recongnition end");
+
+        if (lastDescriptor.size() < 1) {
+            lastDescriptor = descriptor;
+            continue;
+        }
+        faceDistance = faceDescriptor.distance(lastDescriptor, descriptor);
+        LOGD("face distacne is %f", faceDistance);
+    }
+}
+
+ImageProcessor::~ImageProcessor() {
+    recExit = true;
+    recThread.join();
+}
+
 bool ImageProcessor::init(const string& modelDir) {
     if (!mFaceDetector.load(modelDir)) {
         return false;
@@ -57,6 +119,10 @@ bool ImageProcessor::init(const string& modelDir) {
     if (!mFaceLandmark.load(modelDir)) {
         return false;
     }
+    if (!faceDescriptor.load(modelDir))
+        return false;
+    recExit = false;
+    recThread = thread(recognize);
     return true;
 }
 
@@ -79,6 +145,15 @@ void ImageProcessor::process(Mat& image) {
         mPoseEstimator.estimate(image, landmarks[0], poses);
         // Draw head pose
         drawPoses(image, poses);
+
+        // Do face recongnition
+        if (recMutex.try_lock()) {
+            image.copyTo(rgbaImage);
+            faceBox = boxes[0];
+            faceLandmarks = landmarks[0];
+            recMutex.unlock();
+        }
+        drawDistance(image, faceDistance);
     }
 
 }

@@ -115,7 +115,7 @@ add_custom_command(
         COMMAND ${CMAKE_COMMAND} -E copy
                 ${CMAKE_CURRENT_SOURCE_DIR}/models/kazemi_face_landmark.dat
                 ${CMAKE_CURRENT_SOURCE_DIR}/src/main/assets/kazemi_face_landmark.dat
-#        COMMAND ${CMAKE_COMMAND} -E copy
-#        ${CMAKE_CURRENT_SOURCE_DIR}/models/hao_face_detector.dat
-#        ${CMAKE_CURRENT_SOURCE_DIR}/src/main/assets/hao_face_detector.dat
+        COMMAND ${CMAKE_COMMAND} -E copy
+                ${CMAKE_CURRENT_SOURCE_DIR}/models/resnet_face_descriptor.dat
+                ${CMAKE_CURRENT_SOURCE_DIR}/src/main/assets/resnet_face_descriptor.dat
         )
