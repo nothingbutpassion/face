@@ -59,10 +59,23 @@ static void drawPoses(Mat& image, const vector<Point3f>& poses) {
     outtext.str("");
 }
 
-static void drawDistance(Mat& image, float distance) {
-    stringstream outtext;
-    outtext << "D: " << std::setprecision(3) << distance;
-    cv::putText(image, outtext.str(), cv::Point(20, 100), cv::FONT_HERSHEY_SIMPLEX, 0.75, cv::Scalar(255, 0, 0));
+static void drawThumbnails(Mat& image, int currentPersion, vector<Mat>& persons) {
+    constexpr int w = 64;
+    constexpr int h = 64;
+    int nx = image.cols/w;
+    int px = (image.cols%w)/2;
+    int ny = image.rows/h;
+    int py = (image.rows%h)/2;
+    for (int k=0; k < persons.size(); ++k) {
+        int y = k/nx;
+        int x = k%nx;
+        px = px > 4 ? 4 : px;
+        py = py > 4 ? 4 : py;
+        Rect rect(px+x*w, py+y*h, w, h);
+        resize(persons[k], image(rect), Size(rect.width, rect.height));
+        if (k == currentPersion)
+            rectangle(image, rect, CV_RGB(0, 255, 0), 2);
+    }
 }
 
 
@@ -86,12 +99,18 @@ struct FaceRecongnizer {
         if (mInit)
             mThread.join();
     }
-    void set(const Mat& img, const Rect& box, const vector<Point2f>& landmarks) {
+    void setFace(const Mat& img, const Rect& box, const vector<Point2f>& landmarks) {
         LOGD("set image: %dx%d, box: (%d,%d,%d,%d)", img.cols, img.rows, box.x, box.y, box.width, box.height);
         lock_guard<mutex> lock(mMutex);
         img.copyTo(mImage);
         mBox = box;
         mLandmarks = landmarks;
+    }
+    void getPersons(int& currentPersion, vector<Mat>& persons) {
+        lock_guard<mutex> lock(mMutex);
+        currentPersion = mCurrentPerson;
+        for (auto p: mPersons)
+            persons.push_back(get<1>(p));
     }
     void recognize() {
         while (!mThreadExit) {
@@ -119,24 +138,32 @@ struct FaceRecongnizer {
             if (mPersons.size() == 0) {
                 Mat thumbnail;
                 img(box).copyTo(thumbnail);
+                lock_guard<mutex> lock(mMutex);
                 mPersons.push_back(make_tuple(descriptor, thumbnail));
                 mCurrentPerson = 0;
                 LOGD("person %d detected", mCurrentPerson);
                 continue;
             }
             int found = -1;
+            float min = 1;
             for (int i=0; i < mPersons.size(); ++i) {
                 float d = mDescriptor.distance(get<0>(mPersons[i]), descriptor);
-                if (d < 0.6) {
+                if (d < 0.5 && d < min) {
+                    min = d;
                     found = i;
                     mCurrentPerson = found;
                     LOGD("person %d matched (distance=%f)", mCurrentPerson, d);
                     break;
                 }
             }
-            if (found == -1) {
+            if (found != -1) {
                 Mat thumbnail;
                 img(box).copyTo(thumbnail);
+                mPersons[found] = make_tuple(descriptor, thumbnail);
+            } else {
+                Mat thumbnail;
+                img(box).copyTo(thumbnail);
+                lock_guard<mutex> lock(mMutex);
                 mPersons.push_back(make_tuple(descriptor, thumbnail));
                 mCurrentPerson = mPersons.size() - 1;
                 LOGD("new person %d detected", mCurrentPerson);
@@ -180,26 +207,35 @@ void ImageProcessor::process(Mat& image) {
     // Face detection
     mFaceDetector.detect(image, boxes, confidences);
     if (boxes.size() > 0) {
-        for (int i=0; i < boxes.size(); ++i)
-            drawBoxes(image, confidences[i], boxes[i].x, boxes[i].y, boxes[i].x + boxes[i].width, boxes[i].y + boxes[i].height);
-
         // Face landmarks
         vector<vector<Point2f>> landmarks;
         mFaceLandmark.fit(image, boxes, landmarks);
-        drawLandmarks(image, boxes, landmarks);
 
         // Pose estimation
         vector<Point3f> poses;
         mPoseEstimator.estimate(image, landmarks[0], poses);
-        drawPoses(image, poses);
+        // drawPoses(image, poses);
 
         // Face recongnition
         if (0 <= boxes[0].x && boxes[0].x < image.cols &&
             boxes[0].x + boxes[0].width < image.cols &&
             0 <= boxes[0].y && boxes[0].y < image.rows &&
             boxes[0].y + boxes[0].height < image.rows)
-                FaceRecongnizer::instance().set(image, boxes[0], landmarks[0]);
-        //drawDistance(image, FaceRecongnizer::instance().distance());
+                FaceRecongnizer::instance().setFace(image, boxes[0], landmarks[0]);
+
+        // Draw thumbnails
+        int currentPerson;
+        vector<Mat> persons;
+        FaceRecongnizer::instance().getPersons(currentPerson, persons);
+        drawThumbnails(image, currentPerson, persons);
+
+        // Draw face boxes
+        for (int i=0; i < boxes.size(); ++i)
+            drawBoxes(image, confidences[i], boxes[i].x, boxes[i].y, boxes[i].x + boxes[i].width, boxes[i].y + boxes[i].height);
+        // Draw landmarks
+        drawLandmarks(image, boxes, landmarks);
+
     }
+
 }
 
