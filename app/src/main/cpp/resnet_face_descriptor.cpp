@@ -51,8 +51,10 @@ using anet_type = loss_metric<fc_no_bias<128,avg_pool_everything<
                              >>>>>>>>>>>>;
 
 ResnetFaceDescriptor::~ResnetFaceDescriptor() {
-    if (mResNet)
+    if (mResNet) {
         delete static_cast<anet_type*>(mResNet);
+        mResNet = nullptr;
+    }
 }
 
 bool ResnetFaceDescriptor::load(const std::string& modelDir) {

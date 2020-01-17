@@ -7,9 +7,11 @@
 #include "hog_face_detector.h"
 #include "kazemi_face_landmark.h"
 #include "simple_pose_estimator.h"
+#include "resnet_face_descriptor.h"
 
 class ImageProcessor {
 public:
+    ImageProcessor();
     ~ImageProcessor();
     bool init(const std::string& modelDir);
     void process(cv::Mat& image);

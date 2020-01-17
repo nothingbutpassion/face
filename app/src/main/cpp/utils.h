@@ -8,10 +8,10 @@
 #define DEBUG_FACE
 #ifdef  DEBUG_FACE
     #include <android/log.h>
-    #define LOGD(...)   ((void)__android_log_print(ANDROID_LOG_DEBUG, "face", LOG_TAG __VA_ARGS__))
-    #define LOGI(...)   ((void)__android_log_print(ANDROID_LOG_INFO,  "face", LOG_TAG __VA_ARGS__))
-    #define LOGW(...)   ((void)__android_log_print(ANDROID_LOG_WARN,  "face", LOG_TAG __VA_ARGS__))
-    #define LOGE(...)   ((void)__android_log_print(ANDROID_LOG_ERROR, "face", LOG_TAG __VA_ARGS__))
+    #define LOGD(...)   ((void)__android_log_print(ANDROID_LOG_DEBUG, "face", LOG_TAG " " __VA_ARGS__))
+    #define LOGI(...)   ((void)__android_log_print(ANDROID_LOG_INFO,  "face", LOG_TAG " " __VA_ARGS__))
+    #define LOGW(...)   ((void)__android_log_print(ANDROID_LOG_WARN,  "face", LOG_TAG " " __VA_ARGS__))
+    #define LOGE(...)   ((void)__android_log_print(ANDROID_LOG_ERROR, "face", LOG_TAG " " __VA_ARGS__))
 #else
     #define LOGD(...)
     #define LOGI(...)

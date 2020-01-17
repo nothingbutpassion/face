@@ -1,5 +1,6 @@
 #include <unistd.h>
 #include <vector>
+#include <tuple>
 #include <sstream>
 #include <thread>
 #include <mutex>
@@ -15,14 +16,14 @@ using namespace std;
 using namespace cv;
 
 static void drawBoxes(const Mat& frame, float confidence, int left, int top, int right, int bottom) {
-    rectangle(frame, Point(left, top), Point(right, bottom), Scalar(0, 255, 0));
+    rectangle(frame, Point(left, top), Point(right, bottom), CV_RGB(0, 255, 0));
     string label = format("%.2f", confidence);
 
     int baseLine;
     Size labelSize = getTextSize(label, FONT_HERSHEY_SIMPLEX, 0.5, 1, &baseLine);
 
     top = max(top, labelSize.height);
-    rectangle(frame, Point(left, top - labelSize.height), Point(left + labelSize.width, top + baseLine), Scalar::all(255), FILLED);
+    rectangle(frame, Point(left, top - labelSize.height), Point(left + labelSize.width, top + baseLine), CV_RGB(0, 255, 0), FILLED);
     putText(frame, label, Point(left, top), FONT_HERSHEY_SIMPLEX, 0.5, Scalar());
 }
 
@@ -65,96 +66,140 @@ static void drawDistance(Mat& image, float distance) {
 }
 
 
-ResnetFaceDescriptor faceDescriptor;
-thread recThread;
-mutex recMutex;
-Mat rgbaImage;
-Rect faceBox;
-vector<Point2f> faceLandmarks;
-float faceDistance = 0;
-bool recExit = false;
-
-void recognize() {
-    while (!recExit) {
-        Mat img;
-        Rect box;
-        vector<Point2f> landmarks;
-
-        recMutex.lock();
-        img = rgbaImage;
-        rgbaImage = Mat();
-        box = faceBox;
-        landmarks = faceLandmarks;
-        recMutex.unlock();
-
-        if (!img.data) {
-            usleep(3000);
-            continue;
-        }
-
-        static dlib::matrix<float,0,1> lastDescriptor;
-
-        LOGD("face recongnition start");
-        dlib::matrix<float,0,1> descriptor = faceDescriptor.extract(img, box, landmarks);
-        LOGD("face recongnition end");
-
-        if (lastDescriptor.size() < 1) {
-            lastDescriptor = descriptor;
-            continue;
-        }
-        faceDistance = faceDescriptor.distance(lastDescriptor, descriptor);
-        LOGD("face distacne is %f", faceDistance);
+struct FaceRecongnizer {
+    static FaceRecongnizer& instance() {
+        static FaceRecongnizer recongnizer;
+        return recongnizer;
     }
+    bool init(const string& modelDir) {
+        mInit = mDescriptor.load(modelDir);
+        if (mInit)
+            start();
+        return mInit;
+    }
+    void start() {
+        mThreadExit = false;
+        mThread = thread(&FaceRecongnizer::recognize, this);
+    }
+    void stop() {
+        mThreadExit = true;
+        if (mInit)
+            mThread.join();
+    }
+    void set(const Mat& img, const Rect& box, const vector<Point2f>& landmarks) {
+        LOGD("set image: %dx%d, box: (%d,%d,%d,%d)", img.cols, img.rows, box.x, box.y, box.width, box.height);
+        lock_guard<mutex> lock(mMutex);
+        img.copyTo(mImage);
+        mBox = box;
+        mLandmarks = landmarks;
+    }
+    void recognize() {
+        while (!mThreadExit) {
+            Mat img;
+            Rect box;
+            vector<Point2f> landmarks;
+
+            mMutex.lock();
+            img = mImage;
+            mImage = Mat();
+            box = mBox;
+            landmarks = mLandmarks;
+            mMutex.unlock();
+
+            if (!img.data) {
+                usleep(100000);
+                continue;
+            }
+            LOGD("get image: %dx%d, box: (%d,%d,%d,%d)", img.cols, img.rows, box.x, box.y, box.width, box.height);
+            static dlib::matrix<float,0,1> lastDescriptor;
+            LOGD("face recongnition start");
+            dlib::matrix<float,0,1> descriptor = mDescriptor.extract(img, box, landmarks);
+            LOGD("face recongnition end");
+
+            if (mPersons.size() == 0) {
+                Mat thumbnail;
+                img(box).copyTo(thumbnail);
+                mPersons.push_back(make_tuple(descriptor, thumbnail));
+                mCurrentPerson = 0;
+                LOGD("person %d detected", mCurrentPerson);
+                continue;
+            }
+            int found = -1;
+            for (int i=0; i < mPersons.size(); ++i) {
+                float d = mDescriptor.distance(get<0>(mPersons[i]), descriptor);
+                if (d < 0.6) {
+                    found = i;
+                    mCurrentPerson = found;
+                    LOGD("person %d matched (distance=%f)", mCurrentPerson, d);
+                    break;
+                }
+            }
+            if (found == -1) {
+                Mat thumbnail;
+                img(box).copyTo(thumbnail);
+                mPersons.push_back(make_tuple(descriptor, thumbnail));
+                mCurrentPerson = mPersons.size() - 1;
+                LOGD("new person %d detected", mCurrentPerson);
+            }
+        }
+    }
+private:
+    ResnetFaceDescriptor mDescriptor;
+    bool mInit = false;
+    Mat mImage;
+    Rect mBox;
+    vector<Point2f> mLandmarks;
+    vector<tuple<dlib::matrix<float,0,1>, Mat>>  mPersons;
+    int mCurrentPerson = -1;
+    mutex mMutex;
+    thread mThread;
+    bool mThreadExit = false;
+};
+
+
+ImageProcessor::ImageProcessor() {
 }
 
 ImageProcessor::~ImageProcessor() {
-    recExit = true;
-    recThread.join();
+    FaceRecongnizer::instance().stop();
 }
 
 bool ImageProcessor::init(const string& modelDir) {
-    if (!mFaceDetector.load(modelDir)) {
+    if (!mFaceDetector.load(modelDir))
         return false;
-    }
-    if (!mFaceLandmark.load(modelDir)) {
+    if (!mFaceLandmark.load(modelDir))
         return false;
-    }
-    if (!faceDescriptor.load(modelDir))
+    if (!FaceRecongnizer::instance().init(modelDir))
         return false;
-    recExit = false;
-    recThread = thread(recognize);
     return true;
 }
-
 
 void ImageProcessor::process(Mat& image) {
     vector<Rect> boxes;
     vector<float> confidences;
+    // Face detection
     mFaceDetector.detect(image, boxes, confidences);
     if (boxes.size() > 0) {
-        for (int i=0; i < boxes.size(); ++i) {
-            // Draw face boxes
+        for (int i=0; i < boxes.size(); ++i)
             drawBoxes(image, confidences[i], boxes[i].x, boxes[i].y, boxes[i].x + boxes[i].width, boxes[i].y + boxes[i].height);
-        }
+
+        // Face landmarks
         vector<vector<Point2f>> landmarks;
         mFaceLandmark.fit(image, boxes, landmarks);
-        // Draw landmarks
         drawLandmarks(image, boxes, landmarks);
 
+        // Pose estimation
         vector<Point3f> poses;
         mPoseEstimator.estimate(image, landmarks[0], poses);
-        // Draw head pose
         drawPoses(image, poses);
 
-        // Do face recongnition
-        if (recMutex.try_lock()) {
-            image.copyTo(rgbaImage);
-            faceBox = boxes[0];
-            faceLandmarks = landmarks[0];
-            recMutex.unlock();
-        }
-        drawDistance(image, faceDistance);
+        // Face recongnition
+        if (0 <= boxes[0].x && boxes[0].x < image.cols &&
+            boxes[0].x + boxes[0].width < image.cols &&
+            0 <= boxes[0].y && boxes[0].y < image.rows &&
+            boxes[0].y + boxes[0].height < image.rows)
+                FaceRecongnizer::instance().set(image, boxes[0], landmarks[0]);
+        //drawDistance(image, FaceRecongnizer::instance().distance());
     }
-
 }
 
