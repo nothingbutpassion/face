@@ -2,6 +2,7 @@
 #include <dlib/image_processing.h>
 #include <dlib/dnn.h>
 #include <dlib/opencv/cv_image.h>
+#include <dlib/opencv.h>
 #include "utils.h"
 #include "resnet_face_descriptor.h"
 
@@ -72,7 +73,7 @@ bool ResnetFaceDescriptor::load(const std::string& modelDir) {
     return isOk;
 }
 
-dlib::matrix<float,0,1> ResnetFaceDescriptor::extract(const cv::Mat& image, const cv::Rect& face, const std::vector<cv::Point2f>& landmark) {
+cv::Mat ResnetFaceDescriptor::extract(const cv::Mat& image, const cv::Rect& face, std::vector<cv::Point2f>& landmark, cv::Mat* chip) {
     Mat rgb;
     cv::cvtColor(image, rgb, cv::COLOR_RGBA2RGB);
 
@@ -87,9 +88,10 @@ dlib::matrix<float,0,1> ResnetFaceDescriptor::extract(const cv::Mat& image, cons
     extract_image_chip(cimg, get_face_chip_details(shape,150,0.25), face_chips[0]);
     anet_type& net = *static_cast<anet_type*>(mResNet);
     std::vector<matrix<float,0,1>> face_descriptors = net(face_chips);
-    return std::move(face_descriptors[0]);
+    return dlib::toMat(face_descriptors[0]);
 }
 
-float ResnetFaceDescriptor::distance(const dlib::matrix<float,0,1>& descriptor1, const dlib::matrix<float,0,1>& descriptor2) {
-    return dlib::length(descriptor1 - descriptor2);
+
+float ResnetFaceDescriptor::distance(const cv::Mat& descriptor1, const cv::Mat& descriptor2) {
+    return norm(descriptor1, descriptor1, NORM_L2);
 }

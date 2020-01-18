@@ -132,7 +132,7 @@ struct FaceRecongnizer {
             LOGD("get image: %dx%d, box: (%d,%d,%d,%d)", img.cols, img.rows, box.x, box.y, box.width, box.height);
             static dlib::matrix<float,0,1> lastDescriptor;
             LOGD("face recongnition start");
-            dlib::matrix<float,0,1> descriptor = mDescriptor.extract(img, box, landmarks);
+            Mat descriptor = mDescriptor.extract(img, box, landmarks);
             LOGD("face recongnition end");
 
             if (mPersons.size() == 0) {
@@ -176,7 +176,7 @@ private:
     Mat mImage;
     Rect mBox;
     vector<Point2f> mLandmarks;
-    vector<tuple<dlib::matrix<float,0,1>, Mat>>  mPersons;
+    vector<tuple<Mat, Mat>>  mPersons;
     int mCurrentPerson = -1;
     mutex mMutex;
     thread mThread;
