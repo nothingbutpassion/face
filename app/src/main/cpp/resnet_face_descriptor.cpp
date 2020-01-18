@@ -82,16 +82,21 @@ cv::Mat ResnetFaceDescriptor::extract(const cv::Mat& image, const cv::Rect& face
         parts.push_back(dlib::point(p.x, p.y));
     dlib::rectangle rect(face.x, face.y, face.x + face.width, face.y + face.height);
     full_object_detection shape(rect, parts);
-
     std::vector<matrix<rgb_pixel>> face_chips(1);
     dlib::cv_image<rgb_pixel> cimg(rgb);
     extract_image_chip(cimg, get_face_chip_details(shape,150,0.25), face_chips[0]);
     anet_type& net = *static_cast<anet_type*>(mResNet);
     std::vector<matrix<float,0,1>> face_descriptors = net(face_chips);
-    return dlib::toMat(face_descriptors[0]);
+    if (chip)
+        cv::cvtColor(dlib::toMat(face_chips[0]), *chip, cv::COLOR_RGB2RGBA);
+    Mat descriptor;
+    dlib::toMat(face_descriptors[0]).copyTo(descriptor);
+    return descriptor;
 }
 
 
 float ResnetFaceDescriptor::distance(const cv::Mat& descriptor1, const cv::Mat& descriptor2) {
-    return norm(descriptor1, descriptor1, NORM_L2);
+    LOGD("descriptor1: rows=%d, cols=%d, type=%x, data=%p", descriptor1.rows, descriptor1.cols, descriptor1.type(), descriptor1.data);
+    LOGD("descriptor2: rows=%d, cols=%d, type=%x, data=%p", descriptor2.rows, descriptor2.cols, descriptor2.type(), descriptor2.data);
+    return norm(descriptor1 - descriptor2, NORM_L2);
 }
