@@ -4,6 +4,7 @@
 # Sets the minimum version of CMake required to build the native library.
 cmake_minimum_required(VERSION 3.4.1)
 
+# NOTES:
 # Set OpenCV_DIR as the directory contains OpenCVConfig.cmake
 #set(OpenCV_DIR "D:/share/opencv_for_android/sdk/native/jni")
 #find_package(OpenCV REQUIRED)
@@ -11,7 +12,7 @@ cmake_minimum_required(VERSION 3.4.1)
 #target_link_libraries(face ${OpenCV_LIBS})
 
 # NOTES:
-# Opencv shared libs can be built like as follows (opencv 4.0 & NDK-r17 & cmake 3.6.3)
+# Opencv shared libs can be built like as follows (ubuntu 16.04 & opencv 4.0 & NDK-r17 & cmake 3.6.3)
 # After building completed, copy <install>/sdk/native/jni/include & <install-dir>/sdk/native/libs to libs/opencv/
 #/home/yuhao/cmake-3.6.3-Linux-x86_64/bin/cmake  \
 #-DOPENCV_EXTRA_MODULES_PATH=/home/yuhao/opencv_contrib/modules  \
@@ -32,9 +33,9 @@ cmake_minimum_required(VERSION 3.4.1)
 # NOTES:
 # Set OPENCV_INC_DIR/OPENCV_LIB_DIR as OpenCV include/libs directory
 # ${ANDROID_ABI} is set by gradle. see .externalNativeBuild/cmake/<debug or release>/<abi>/cmake_build_command.txt
-set(OPENCV_INC_DIR "${CMAKE_CURRENT_SOURCE_DIR}/libs/opencv/include")
-set(OPENCV_LIB_DIR "${CMAKE_CURRENT_SOURCE_DIR}/libs/opencv/libs/${ANDROID_ABI}")
-set(OPENCV_LIBS  opencv_core opencv_imgproc opencv_imgcodecs opencv_dnn opencv_face opencv_calib3d)
+set(OPENCV_INC_DIR "E:/share/opencv/build_for_android_arm64-v8a/install/sdk/native/jni/include")
+set(OPENCV_LIB_DIR "E:/share/opencv/build_for_android_arm64-v8a/install/sdk/native/libs/${ANDROID_ABI}")
+set(OPENCV_LIBS  opencv_core opencv_imgproc opencv_imgcodecs opencv_dnn opencv_calib3d)
 
 foreach(name in ${OPENCV_LIBS})
     add_library(${name} SHARED IMPORTED )
@@ -44,7 +45,7 @@ endforeach()
 
 # NOTES:
 # We directly use dlib source, so set the dlib root dir for finding
-set(DLIB_ROOT "D:/share/dlib-19.17")
+set(DLIB_ROOT "E:/share/dlib-19.19")
 #set(DLIB_ROOT "E:/qiujing/code/DmsDemoService/thirdparty/dlib")
 #set(OPENBLAS_ROOT "E:/qiujing/code/DmsDemoService/thirdparty/openblas")
 #add_library(dlib SHARED IMPORTED )
@@ -53,12 +54,15 @@ set(DLIB_ROOT "D:/share/dlib-19.17")
 #set_target_properties(openblas PROPERTIES IMPORTED_LOCATION ${OPENBLAS_ROOT}/libs/arm64-v8a/libopenblas.so)
 
 # NOTES:
-# tensorflow lite head files research dirs include <tensorflow-source-root-dir> and <flatbuffer-include-dir>
-set(TFLITE_INC_DIR "D:/share/tensorflow")
-set(FLATBUFFER_INC_DIR "libs/flatbuffer/include")
+# tensorflow lite head files research dirs include <tensorflow-source-root-dir> and <flatb-include-dir>
+set(TFLITE_INC_DIR
+        "E:/share/tensorflow"
+        "E:/share/tensorflow_external/flatbuffers/include"
+        "E:/share/tensorflow_external/com_google_absl"
+        )
+set(TFLITE_LIB "E:/share/tensorflow/bazel-out/arm64-v8a-opt/bin/tensorflow/lite/libtensorflowlite.so" )
 add_library(tensorflowlite SHARED IMPORTED )
-set_target_properties(tensorflowlite PROPERTIES
-        IMPORTED_LOCATION "${CMAKE_CURRENT_SOURCE_DIR}/libs/tflite/libs/${ANDROID_ABI}/libtensorflowlite.so")
+set_target_properties(tensorflowlite PROPERTIES IMPORTED_LOCATION ${TFLITE_LIB})
 
 # Creates and names a library, sets it as either STATIC
 # or SHARED, and provides the relative paths to its source code.
@@ -71,7 +75,6 @@ add_library(face SHARED
         src/main/cpp/hog_face_detector.cpp
 #        src/main/cpp/ssd_face_detector.cpp
 #        src/main/cpp/hao_face_detector.cpp
-#        src/main/cpp/lbf_face_landmark.cpp
         src/main/cpp/resnet_face_descriptor.cpp
         src/main/cpp/kazemi_face_landmark.cpp
         src/main/cpp/simple_pose_estimator.cpp
@@ -93,11 +96,11 @@ target_include_directories(face PRIVATE
         ${OPENCV_INC_DIR}
         ${DLIB_ROOT}                          # for dlib includes
         ${TFLITE_INC_DIR}                     # for tensorflow lite
-        ${FLATBUFFER_INC_DIR}                 # for flatbuffer referenced by tensorflow lite
         )
 
 target_compile_definitions(face PRIVATE
         -DDLIB_NO_GUI_SUPPORT                 #  for building dlib with no GUI support
+        -DCV__ENABLE_C_API_CTORS              #  for fixing convertion from cv::Mat to dilb::cv_image<>
         )
 
 # Specifies libraries CMake should link to your target library. You

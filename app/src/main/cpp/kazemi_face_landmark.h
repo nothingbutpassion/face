@@ -3,7 +3,7 @@
 
 #include <string>
 #include <vector>
-#include <opencv2/face.hpp>
+//#include <opencv2/face.hpp>
 #include <dlib/image_processing.h>
 #include <dlib/image_processing/frontal_face_detector.h>
 
