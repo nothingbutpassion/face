@@ -33,9 +33,9 @@ cmake_minimum_required(VERSION 3.4.1)
 # NOTES:
 # Set OPENCV_INC_DIR/OPENCV_LIB_DIR as OpenCV include/libs directory
 # ${ANDROID_ABI} is set by gradle. see .externalNativeBuild/cmake/<debug or release>/<abi>/cmake_build_command.txt
-set(OPENCV_INC_DIR "E:/share/opencv/build_for_android_arm64-v8a/install/sdk/native/jni/include")
-set(OPENCV_LIB_DIR "E:/share/opencv/build_for_android_arm64-v8a/install/sdk/native/libs/${ANDROID_ABI}")
-set(OPENCV_LIBS  opencv_core opencv_imgproc opencv_imgcodecs opencv_dnn opencv_calib3d)
+set(OPENCV_INC_DIR "Z:/opencv/build_for_android_arm64-v8a/install/sdk/native/jni/include")
+set(OPENCV_LIB_DIR "Z:/opencv/build_for_android_arm64-v8a/install/sdk/native/libs/${ANDROID_ABI}")
+set(OPENCV_LIBS opencv_core opencv_imgproc opencv_imgcodecs opencv_dnn opencv_calib3d opencv_features2d opencv_flann)
 
 foreach(name in ${OPENCV_LIBS})
     add_library(${name} SHARED IMPORTED )
@@ -45,22 +45,16 @@ endforeach()
 
 # NOTES:
 # We directly use dlib source, so set the dlib root dir for finding
-set(DLIB_ROOT "E:/share/dlib-19.19")
-#set(DLIB_ROOT "E:/qiujing/code/DmsDemoService/thirdparty/dlib")
-#set(OPENBLAS_ROOT "E:/qiujing/code/DmsDemoService/thirdparty/openblas")
-#add_library(dlib SHARED IMPORTED )
-#set_target_properties(dlib PROPERTIES IMPORTED_LOCATION ${DLIB_ROOT}/libs/arm64-v8a/libdlib.so)
-#add_library(openblas SHARED IMPORTED )
-#set_target_properties(openblas PROPERTIES IMPORTED_LOCATION ${OPENBLAS_ROOT}/libs/arm64-v8a/libopenblas.so)
+set(DLIB_ROOT "Z:/dlib-19.19")
 
 # NOTES:
 # tensorflow lite head files research dirs include <tensorflow-source-root-dir> and <flatb-include-dir>
 set(TFLITE_INC_DIR
-        "E:/share/tensorflow"
-        "E:/share/tensorflow_external/flatbuffers/include"
-        "E:/share/tensorflow_external/com_google_absl"
+        "Z:/tensorflow"
+        "Z:/.cache/bazel/_bazel_yuhao/e2565a7e6afe4afd7195ad0efe2016e4/external/com_google_absl"
+        "Z:/.cache/bazel/_bazel_yuhao/e2565a7e6afe4afd7195ad0efe2016e4/external/flatbuffers/include"
         )
-set(TFLITE_LIB "E:/share/tensorflow/bazel-out/arm64-v8a-opt/bin/tensorflow/lite/libtensorflowlite.so" )
+set(TFLITE_LIB "Z:/tensorflow/bazel-out/arm64-v8a-opt/bin/tensorflow/lite/libtensorflowlite.so" )
 add_library(tensorflowlite SHARED IMPORTED )
 set_target_properties(tensorflowlite PROPERTIES IMPORTED_LOCATION ${TFLITE_LIB})
 
@@ -73,8 +67,8 @@ add_library(face SHARED
         src/main/cpp/image_processor_jni.cpp
         src/main/cpp/image_processor.cpp
         src/main/cpp/hog_face_detector.cpp
-#        src/main/cpp/ssd_face_detector.cpp
-#        src/main/cpp/hao_face_detector.cpp
+        src/main/cpp/ssd_face_detector.cpp
+        src/main/cpp/hao_face_detector.cpp
         src/main/cpp/resnet_face_descriptor.cpp
         src/main/cpp/kazemi_face_landmark.cpp
         src/main/cpp/simple_pose_estimator.cpp
