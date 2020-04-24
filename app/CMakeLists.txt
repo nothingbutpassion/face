@@ -121,3 +121,10 @@ set_target_properties(test_v4l2_capture
         PROPERTIES
         RUNTIME_OUTPUT_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/build/outputs/bin/${CMAKE_BUILD_TYPE}"
         )
+
+add_custom_command(
+        TARGET face PRE_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy
+        ${CMAKE_CURRENT_SOURCE_DIR}/models/kazemi_face_landmark.dat
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/main/assets/kazemi_face_landmark.dat
+)
