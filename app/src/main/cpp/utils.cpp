@@ -1,6 +1,8 @@
 #include <pthread.h>
 #include "utils.h"
 
+#define LOG_TAG "Utils"
+
 // NOTES:
 // Each Android application owns only one JavaVM
 // Save a global JavaVM for latter getting JavaEnv from different thread context.

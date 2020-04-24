@@ -2,7 +2,6 @@
 #include "utils.h"
 #include "ssd_face_detector.h"
 
-#undef  LOG_TAG
 #define LOG_TAG "SSDFaceDetector"
 
 using namespace std;

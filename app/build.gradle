@@ -12,7 +12,7 @@ android {
     compileSdkVersion 28
     defaultConfig {
         applicationId "com.hsae.dms"
-        minSdkVersion 22
+        minSdkVersion 27
         targetSdkVersion 28
         versionCode 1
         versionName "1.0"
@@ -46,9 +46,11 @@ android {
             // NOTES:
             // Specify OpenCV libs dir where all .so files packaged to this apk
             jniLibs.srcDirs 'libs'
-            // jniLibs.srcDirs 'libs/opencv/libs', 'libs/tflite/libs'
             // jniLibs.srcDirs 'libs/opencv/libs', 'E:/qiujing/code/DmsDemoService/thirdparty/dlib/libs', 'E:/qiujing/code/DmsDemoService/thirdparty/openblas/libs'
         }
+    }
+    lintOptions {
+        abortOnError false
     }
 }
 

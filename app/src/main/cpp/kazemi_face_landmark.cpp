@@ -5,22 +5,18 @@
 #include "utils.h"
 #include "kazemi_face_landmark.h"
 
-#undef  LOG_TAG
-#define LOG_TAG "LBFFaceLandmark"
+#define LOG_TAG "KazemiFaceLandmark"
 
 using namespace std;
 using namespace cv;
 using namespace dlib;
 
-KazemiFaceLandmark::KazemiFaceLandmark() {
-
-}
-
 bool KazemiFaceLandmark::load(const string& modelDir) {
     string modelFile = modelDir + "/kazemi_face_landmark.dat";
     try {
         deserialize(modelFile) >> mShapePredictor;
-    } catch (...) {
+    } catch (exception& e) {
+        LOGE("exception: %s", e.what());
         LOGE("failed to load model file: %s", modelFile.c_str());
         return false;
     }

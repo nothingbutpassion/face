@@ -6,7 +6,6 @@
 using namespace std;
 using namespace cv;
 
-#undef  LOG_TAG
 #define LOG_TAG "SimplePoseEstimator"
 
 // NOTES:
@@ -81,7 +80,7 @@ static void adjustObjectPoints(vector<Point3d>& objectPoints, const vector<Point
     }
     if (newErr < oldErr)
         objectPoints = points;
-    LOGD("reproject errors: old=%.2f, new=%.2f", oldErr/points.size(), newErr/points.size());
+//    LOGD("reproject errors: old=%.2f, new=%.2f", oldErr/points.size(), newErr/points.size());
 }
 
 //def reproject_axis(image, rotation_vec, translation_vec, cam_matrix, dist_coeffs):
