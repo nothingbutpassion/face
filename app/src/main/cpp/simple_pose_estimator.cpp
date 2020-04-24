@@ -11,7 +11,7 @@ using namespace cv;
 // NOTES:
 // 14 3D object points(world coordinates), the 3D head model comes from http://aifi.isr.uc.pt/Downloads/OpenGL/glAnthropometric3DModel.cpp
 // Also see https://github.com/lincolnhard/head-pose-estimation
-static vector<Point3d> objectPoints = {
+static vector<Point3d> gHeadModelPoints = {
     Point3d(6.825897, 6.760612, 4.402142),     //#33 left brow left corner
     Point3d(1.330353, 7.122144, 6.903745),     //#29 left brow right corner
     Point3d(-1.330353, 7.122144, 6.903745),    //#34 right brow left corner
@@ -83,20 +83,7 @@ static void adjustObjectPoints(vector<Point3d>& objectPoints, const vector<Point
 //    LOGD("reproject errors: old=%.2f, new=%.2f", oldErr/points.size(), newErr/points.size());
 }
 
-//def reproject_axis(image, rotation_vec, translation_vec, cam_matrix, dist_coeffs):
-//    orgsrc1 = (object_pts[4] + object_pts[5])/2 + np.float32([0, 0, 2])
-//    reprojectsrc1 = 0.5*axis_pts + orgsrc1
-//    orgsrc2 = (object_pts[6] + object_pts[7])/2 + np.float32([0, 0, 2])
-//    reprojectsrc2 = 0.5*axis_pts + orgsrc2
-//    # reprojectsrc =  np.concatenate((reprojectsrc1, reprojectsrc2))
-//    reprojectsrc = (reprojectsrc1 + reprojectsrc2)/2
-//    reprojectdst, _ = cv2.projectPoints(reprojectsrc, rotation_vec, translation_vec, cam_matrix, dist_coeffs)
-//    reprojectdst = tuple(map(tuple, reprojectdst.reshape(-1, 2)))
-//    cv2.line(image, reprojectdst[0], reprojectdst[1], (0, 0, 255), 2, cv2.LINE_AA)
-//    cv2.line(image, reprojectdst[0], reprojectdst[2], (0, 255, 0), 2, cv2.LINE_AA)
-//    cv2.line(image, reprojectdst[0], reprojectdst[3], (255, 0, 0), 2, cv2.LINE_AA)
-
-static void drawAxis(Mat& image, const Mat& cameraMatrix, const Mat& distCoeffs, const Mat& rvec, const Mat& tvec) {
+static void drawAxis(Mat& image, const vector<Point3d>& objectPoints, const Mat& cameraMatrix, const Mat& distCoeffs, const Mat& rvec, const Mat& tvec) {
     std::vector<Point3d> axisPoints = {
             Point3d(0.0, 0.0, 0.0),
             Point3d(5.0, 0.0, 0.0),
@@ -114,51 +101,63 @@ static void drawAxis(Mat& image, const Mat& cameraMatrix, const Mat& distCoeffs,
     line(image, outPoints[0], outPoints[3], CV_RGB(0, 0, 255), 2, LINE_AA);
 }
 
+SimplePoseEstimator::SimplePoseEstimator() {
+    mObjectPoints = gHeadModelPoints;
+}
 
-bool SimplePoseEstimator::estimate(const Mat& image, const vector<Point2f>& faceMarks, vector<Point3f>& poses) {
+void SimplePoseEstimator::project(const vector<Point3d>& objectPoints, const Mat& rvec,
+        const Mat& tvec, const vector<Point3d>& imagePoints ) {
+    projectPoints(objectPoints, rvec, tvec, mCameraMatrix, mDistCoeffs, imagePoints);
+}
+
+bool SimplePoseEstimator::estimate(const Mat& image, const vector<Point2f>& landmarks,
+        vector<Point3f>& poses, Mat* rotation, cv::Mat* translation) {
+    // NOTES:
+    // We approximate Camera Matrix  with cx = half image width, cy = half image height, fx = cx/tan(60/2*PI/180), fy=fx
+    if (mCameraMatrix.empty()) {
+        double cx = image.cols/2;
+        double cy = image.rows/2;
+        double fx = cx/tan(3.1415926535/6);
+        double fy = fx;
+        double K[9] = {
+                fx, 0.0, cx,
+                0.0, fy, cy,
+                0.0, 0.0, 1.0
+        };
+        double D[5] = { 0.0, 0.0, 0.0, 0.0, 0.0 };
+        Mat(3, 3, CV_64FC1, K).copyTo(mCameraMatrix);
+        Mat(5, 1, CV_64FC1, D).copyTo(mDistCoeffs);
+    }
     // NOTES:
     // There're 14 2D points from 68 face landmarks, see https://ibug.doc.ic.ac.uk/resources/300-W/
     std::vector<Point2d> imagePoints = {
-            cv::Point2d(faceMarks[17].x, faceMarks[17].y), //#17 left brow left corner
-            cv::Point2d(faceMarks[21].x, faceMarks[21].y), //#21 left brow right corner
-            cv::Point2d(faceMarks[22].x, faceMarks[22].y), //#22 right brow left corner
-            cv::Point2d(faceMarks[26].x, faceMarks[26].y), //#26 right brow right corner
-            cv::Point2d(faceMarks[36].x, faceMarks[36].y), //#36 left eye left corner
-            cv::Point2d(faceMarks[39].x, faceMarks[39].y), //#39 left eye right corner
-            cv::Point2d(faceMarks[42].x, faceMarks[42].y), //#42 right eye left corner
-            cv::Point2d(faceMarks[45].x, faceMarks[45].y), //#45 right eye right corner
-            cv::Point2d(faceMarks[31].x, faceMarks[31].y), //#31 nose left corner
-            cv::Point2d(faceMarks[35].x, faceMarks[35].y), //#35 nose right corner
-            cv::Point2d(faceMarks[48].x, faceMarks[48].y), //#48 mouth left corner
-            cv::Point2d(faceMarks[54].x, faceMarks[54].y), //#54 mouth right corner
-            cv::Point2d(faceMarks[57].x, faceMarks[57].y), //#57 mouth central bottom corner
-            cv::Point2d(faceMarks[8].x,  faceMarks[8].y),   //#8 chin corner
+            cv::Point2d(landmarks[17].x, landmarks[17].y), //#17 left brow left corner
+            cv::Point2d(landmarks[21].x, landmarks[21].y), //#21 left brow right corner
+            cv::Point2d(landmarks[22].x, landmarks[22].y), //#22 right brow left corner
+            cv::Point2d(landmarks[26].x, landmarks[26].y), //#26 right brow right corner
+            cv::Point2d(landmarks[36].x, landmarks[36].y), //#36 left eye left corner
+            cv::Point2d(landmarks[39].x, landmarks[39].y), //#39 left eye right corner
+            cv::Point2d(landmarks[42].x, landmarks[42].y), //#42 right eye left corner
+            cv::Point2d(landmarks[45].x, landmarks[45].y), //#45 right eye right corner
+            cv::Point2d(landmarks[31].x, landmarks[31].y), //#31 nose left corner
+            cv::Point2d(landmarks[35].x, landmarks[35].y), //#35 nose right corner
+            cv::Point2d(landmarks[48].x, landmarks[48].y), //#48 mouth left corner
+            cv::Point2d(landmarks[54].x, landmarks[54].y), //#54 mouth right corner
+            cv::Point2d(landmarks[57].x, landmarks[57].y), //#57 mouth central bottom corner
+            cv::Point2d(landmarks[8].x,  landmarks[8].y),   //#8 chin corner
     };
-    // NOTES:
-    // We apprximate cx by half image width, cy by half image height, fx = cx/tan(60/2*PI/180), fy=fx
-    double cx = image.cols/2;
-    double cy = image.rows/2;
-    double fx = cx/tan(3.1415926535/6);
-    double fy = fx;
-    double K[9] = {
-            fx, 0.0, cx,
-            0.0, fy, cy,
-            0.0, 0.0, 1.0
-    };
-    double D[5] = { 0.0, 0.0, 0.0, 0.0, 0.0 };
-    Mat cameraMatrix(3, 3, CV_64FC1, K);
-    Mat distCoeffs(5, 1, CV_64FC1, D);
+
     Mat rvec;
     Mat tvec;
 
     // Get Rotation and Translation vector
-    solvePnP(objectPoints, imagePoints, cameraMatrix, distCoeffs, rvec, tvec);
+    solvePnP(mObjectPoints, imagePoints, mCameraMatrix, mDistCoeffs, rvec, tvec);
 
     // Adjust object point coords by using "gradient descent" optimization
-    adjustObjectPoints(objectPoints, imagePoints, cameraMatrix, distCoeffs, rvec, tvec);
+    adjustObjectPoints(mObjectPoints, imagePoints, mCameraMatrix, mDistCoeffs, rvec, tvec);
 
     // Only for Debuging
-    drawAxis(const_cast<Mat&>(image), cameraMatrix, distCoeffs, rvec, tvec);
+    drawAxis(const_cast<Mat&>(image), mObjectPoints, mCameraMatrix, mDistCoeffs, rvec, tvec);
 
     // Caculate Euler angles (Unit: degrees)
     Mat rotMatrix(3, 3, CV_64FC1);
@@ -170,9 +169,13 @@ bool SimplePoseEstimator::estimate(const Mat& image, const vector<Point2f>& face
     cv::Rodrigues(rvec, rotMatrix);
     cv::hconcat(rotMatrix, tvec, projMatrix);
     decomposeProjectionMatrix(projMatrix, outCamMatrix, outRotMatrix, outTransVec, cv::noArray(), cv::noArray(), cv::noArray(), outEulerAngles);
-
-    // Fill outputs.
     poses.push_back(Point3f(outEulerAngles.at<double>(0), outEulerAngles.at<double>(1), outEulerAngles.at<double>(2)));
+    if (rotation)
+        *rotation = rvec;
+    if (translation)
+        *translation = tvec;
     return true;
 }
+
+
 

@@ -15,9 +15,9 @@
 using namespace std;
 using namespace cv;
 
-static void drawBoxes(const Mat& frame, float confidence, int left, int top, int right, int bottom) {
+static void drawBoxes(const Mat& frame, int left, int top, int right, int bottom, float score, int index) {
     rectangle(frame, Point(left, top), Point(right, bottom), CV_RGB(0, 255, 0));
-    string label = format("%.2f", confidence);
+    string label = format("score: %.2f index: %d", score, index);
 
     int baseLine;
     Size labelSize = getTextSize(label, FONT_HERSHEY_SIMPLEX, 0.5, 1, &baseLine);
@@ -27,7 +27,7 @@ static void drawBoxes(const Mat& frame, float confidence, int left, int top, int
     putText(frame, label, Point(left, top), FONT_HERSHEY_SIMPLEX, 0.5, Scalar());
 }
 
-static void drawLandmark(Mat& image, const vector<Rect>& boxes, const vector<Point2f>& landmark) {
+static void drawLandmarks(Mat& image, const vector<Rect>& boxes, const vector<Point2f>& landmark) {
 //    vector<Scalar> colors(68);
 //    for (int i=0; i <= 16; ++i) colors[i] =  CV_RGB(255,0,0);  // 0 - 16 is profile      17 points
 //    for (int i=17; i <= 21; ++i) colors[i] = CV_RGB(255,0,0);  // 17 - 21 left eyebrow    5 points
@@ -195,37 +195,48 @@ bool ImageProcessor::init(const string& modelDir) {
 }
 
 void ImageProcessor::process(Mat& image) {
+    Mat gray;
+    Mat gray_hog;
     vector<Rect> boxes;
-    vector<float> confidences;
-    // Face detection
-    mFaceDetector.detect(image, boxes, confidences);
+    vector<float> scores;
+    vector<int> indices;
+    cvtColor(image, gray, COLOR_RGBA2GRAY);
+    resize(gray, gray_hog, gray.size()/2);
+
+    mFaceDetector.detect(gray_hog, boxes, scores, &indices);
+    for (Rect& b: boxes) {
+        b.x *= 2;
+        b.y *= 2;
+        b.width *= 2;
+        b.height *= 2;
+    }
     if (boxes.size() > 0) {
-        // Face landmarks
-        vector<vector<Point2f>> landmarks;
-        mFaceLandmark.fit(image, boxes, landmarks);
 
-        // Face recongnition
-        if (0 <= boxes[0].x && boxes[0].x < image.cols &&
-            boxes[0].x + boxes[0].width < image.cols &&
-            0 <= boxes[0].y && boxes[0].y < image.rows &&
-            boxes[0].y + boxes[0].height < image.rows)
-            FaceRecongnizer::instance().setFace(image, boxes[0], landmarks[0]);
-
+        vector<Point2f> landmarks;
+        mFaceLandmark.fit(gray, boxes[0], landmarks);
+//
+//        // Face recongnition
+//        if (0 <= boxes[0].x && boxes[0].x < image.cols &&
+//            boxes[0].x + boxes[0].width < image.cols &&
+//            0 <= boxes[0].y && boxes[0].y < image.rows &&
+//            boxes[0].y + boxes[0].height < image.rows)
+//            FaceRecongnizer::instance().setFace(image, boxes[0], landmarks[0]);
+//
         // Pose estimation
         vector<Point3f> poses;
-        mPoseEstimator.estimate(image, landmarks[0], poses);
+        mPoseEstimator.estimate(image, landmarks, poses);
         drawPoses(image, poses);
-
-        // Draw thumbnails
-        int currentPerson;
-        vector<Mat> persons;
-        FaceRecongnizer::instance().getPersons(currentPerson, persons);
-        drawThumbnails(image, currentPerson, persons);
+//
+//        // Draw thumbnails
+//        int currentPerson;
+//        vector<Mat> persons;
+//        FaceRecongnizer::instance().getPersons(currentPerson, persons);
+//        drawThumbnails(image, currentPerson, persons);
 
         // Draw face boxes
-        drawBoxes(image, confidences[0], boxes[0].x, boxes[0].y, boxes[0].x + boxes[0].width, boxes[0].y + boxes[0].height);
+        drawBoxes(image, boxes[0].x, boxes[0].y, boxes[0].x + boxes[0].width, boxes[0].y + boxes[0].height, scores[0], indices[0]);
         // Draw landmarks
-        drawLandmark(image, boxes, landmarks[0]);
+        drawLandmarks(image, boxes, landmarks);
 
     }
 

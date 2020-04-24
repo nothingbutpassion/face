@@ -3,15 +3,15 @@
 
 #include <string>
 #include <vector>
-#include <dlib/image_processing/frontal_face_detector.h>
+#include <opencv2/core.hpp>
 
 class HOGFaceDetector {
 public:
+    ~HOGFaceDetector();
     bool load(const std::string& modelDir);
-    void detect(const cv::Mat& image, std::vector<cv::Rect>& objects, std::vector<float>& confidences);
-
+    void detect(const cv::Mat& gray, std::vector<cv::Rect>& faces, std::vector<float>& scores, std::vector<int>* indices = nullptr);
 private:
-    dlib::frontal_face_detector mFrontalFaceDetector;
+    void* mDetector = nullptr;
 };
 
 #endif // HOG_FACE_DETECTOR_H

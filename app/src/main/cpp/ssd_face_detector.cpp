@@ -31,12 +31,9 @@ bool SSDFaceDetector::load(const string& modelDir) {
 }
 
 void SSDFaceDetector::detect(const Mat& image, vector<Rect>& objects, vector<float>& scores) {
-    Mat rgbImage;
     Mat blob;
     vector<Mat> outs;
-
-    cvtColor(image, rgbImage, COLOR_RGBA2BGR);
-    dnn::blobFromImage(rgbImage, blob, 1.0, Size(300, 300), Scalar(104.0,177.0,123.0));
+    dnn::blobFromImage(image, blob, 1.0, Size(300, 300), Scalar(104.0,177.0,123.0));
     mFaceNet.setInput(blob);
     mFaceNet.forward(outs, getOutputsNames(mFaceNet));
 

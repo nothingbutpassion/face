@@ -3,17 +3,16 @@
 
 #include <string>
 #include <vector>
-//#include <opencv2/face.hpp>
-#include <dlib/image_processing.h>
-#include <dlib/image_processing/frontal_face_detector.h>
+#include <opencv2/core.hpp>
 
 class KazemiFaceLandmark {
 public:
+    ~KazemiFaceLandmark();
     bool load(const std::string& modelDir);
-    bool fit(const cv::Mat& image, const std::vector<cv::Rect>& faces, std::vector<std::vector<cv::Point2f>>& landmarks);
-
+    void fit(const cv::Mat& gray, const cv::Rect& face, std::vector<cv::Point2f>& landmarks);
 private:
-    dlib::shape_predictor mShapePredictor;
+    void* mShapePredictor = nullptr;
+
 };
 
 #endif // KAZEMI_FACE_LANDMARK_H
