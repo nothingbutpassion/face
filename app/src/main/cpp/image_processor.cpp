@@ -57,6 +57,24 @@ static void drawPoses(Mat& image, const vector<Point3f>& poses) {
     outtext.str("");
 }
 
+static void drawAxis(Mat& image, const vector<Point3d>& objectPoints, const Mat& cameraMatrix, const Mat& distCoeffs, const Mat& rvec, const Mat& tvec) {
+    std::vector<Point3d> axisPoints = {
+            Point3d(0.0, 0.0, 0.0),
+            Point3d(5.0, 0.0, 0.0),
+            Point3d(0.0, 5.0, 0.0),
+            Point3d(0.0, 0.0, 5.0)
+    };
+    Point3d t = (objectPoints[4] +  objectPoints[5] +  objectPoints[6] +  objectPoints[7])/4 + Point3d(0.0, 0.0, 2.0);
+    for (Point3d& p: axisPoints) {
+        p += t;
+    }
+    vector<Point2d> outPoints;
+    projectPoints(axisPoints, rvec, tvec, cameraMatrix, distCoeffs, outPoints);
+    line(image, outPoints[0], outPoints[1], CV_RGB(255, 0, 0), 2, LINE_AA);
+    line(image, outPoints[0], outPoints[2], CV_RGB(0, 255, 0), 2, LINE_AA);
+    line(image, outPoints[0], outPoints[3], CV_RGB(0, 0, 255), 2, LINE_AA);
+}
+
 static void drawThumbnails(Mat& image, int currentPersion, vector<Mat>& persons) {
     constexpr int w = 64;
     constexpr int h = 64;
@@ -70,12 +88,13 @@ static void drawThumbnails(Mat& image, int currentPersion, vector<Mat>& persons)
         px = px > 4 ? 4 : px;
         py = py > 4 ? 4 : py;
         Rect rect(px+x*w, py+y*h, w, h);
-        resize(persons[k], image(rect), Size(rect.width, rect.height));
+        Mat person;
+        cvtColor(persons[k], person, COLOR_RGB2RGBA);
+        resize(person, image(rect), Size(rect.width, rect.height));
         if (k == currentPersion)
             rectangle(image, rect, CV_RGB(0, 255, 0), 2);
     }
 }
-
 
 struct FaceRecongnizer {
     static FaceRecongnizer& instance() {
@@ -98,9 +117,9 @@ struct FaceRecongnizer {
             mThread.join();
     }
     void setFace(const Mat& img, const Rect& box, const vector<Point2f>& landmarks) {
-//        LOGD("set image: %dx%d, box: (%d,%d,%d,%d)", img.cols, img.rows, box.x, box.y, box.width, box.height);
+        // LOGD("set image: %dx%d, box: (%d,%d,%d,%d)", img.cols, img.rows, box.x, box.y, box.width, box.height);
         lock_guard<mutex> lock(mMutex);
-        img.copyTo(mImage);
+        cvtColor(img, mImage, COLOR_RGBA2RGB);
         mBox = box;
         mLandmarks = landmarks;
     }
@@ -127,8 +146,7 @@ struct FaceRecongnizer {
                 usleep(100000);
                 continue;
             }
-//            LOGD("get image: %dx%d, box: (%d,%d,%d,%d)", img.cols, img.rows, box.x, box.y, box.width, box.height);
-            static dlib::matrix<float,0,1> lastDescriptor;
+            //LOGD("get image: %dx%d, box: (%d,%d,%d,%d)", img.cols, img.rows, box.x, box.y, box.width, box.height);
             LOGD("face recongnition start");
             Mat chip;
             Mat descriptor = mDescriptor.extract(img, box, landmarks, &chip);
@@ -211,27 +229,30 @@ void ImageProcessor::process(Mat& image) {
         b.height *= 2;
     }
     if (boxes.size() > 0) {
-
         vector<Point2f> landmarks;
         mFaceLandmark.fit(gray, boxes[0], landmarks);
-//
-//        // Face recongnition
-//        if (0 <= boxes[0].x && boxes[0].x < image.cols &&
-//            boxes[0].x + boxes[0].width < image.cols &&
-//            0 <= boxes[0].y && boxes[0].y < image.rows &&
-//            boxes[0].y + boxes[0].height < image.rows)
-//            FaceRecongnizer::instance().setFace(image, boxes[0], landmarks[0]);
-//
+
+        // Face recongnition
+        if (0 <= boxes[0].x && boxes[0].x < image.cols &&
+            boxes[0].x + boxes[0].width < image.cols &&
+            0 <= boxes[0].y && boxes[0].y < image.rows &&
+            boxes[0].y + boxes[0].height < image.rows &&
+            indices[0] == 0)
+            FaceRecongnizer::instance().setFace(image, boxes[0], landmarks);
+
         // Pose estimation
         vector<Point3f> poses;
-        mPoseEstimator.estimate(image, landmarks, poses);
+        Mat rvec;
+        Mat tvec;
+        mPoseEstimator.estimate(image, landmarks, poses, &rvec, &tvec);
         drawPoses(image, poses);
-//
-//        // Draw thumbnails
-//        int currentPerson;
-//        vector<Mat> persons;
-//        FaceRecongnizer::instance().getPersons(currentPerson, persons);
-//        drawThumbnails(image, currentPerson, persons);
+        drawAxis(image, mPoseEstimator.objectPoints(), mPoseEstimator.cameraMatrix(), mPoseEstimator.distCoeffs(), rvec, tvec);
+
+        // Draw thumbnails
+        int currentPerson;
+        vector<Mat> persons;
+        FaceRecongnizer::instance().getPersons(currentPerson, persons);
+        drawThumbnails(image, currentPerson, persons);
 
         // Draw face boxes
         drawBoxes(image, boxes[0].x, boxes[0].y, boxes[0].x + boxes[0].width, boxes[0].y + boxes[0].height, scores[0], indices[0]);

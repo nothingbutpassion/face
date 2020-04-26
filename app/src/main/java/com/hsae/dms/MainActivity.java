@@ -26,7 +26,7 @@ import java.lang.annotation.Native;
 import java.util.concurrent.ConcurrentLinkedQueue;
 
 public class MainActivity extends Activity {
-    private final String TAG = "MainActivity";
+    private final String TAG = "face MainActivity";
     private ImageProcessor mImageProcessor = new ImageProcessor();
     private VideoCapture mVideoCapture = new VideoCapture(MainActivity.this);
     private Surface mPreviewSurface;
@@ -156,7 +156,6 @@ public class MainActivity extends Activity {
             nativeBuffer.draw(mPreviewSurface);
         }
         Log.i(TAG, "NativeBuffer.draw: " + (System.currentTimeMillis() - t4) + "ms");
-        Log.i(TAG, "processFrame: " + (System.currentTimeMillis() - t1) + "ms");
     }
 
     private  boolean requestPermissions() {

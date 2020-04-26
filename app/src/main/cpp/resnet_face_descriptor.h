@@ -4,7 +4,6 @@
 #include <string>
 #include <vector>
 #include <opencv2/core.hpp>
-#include <dlib/image_processing.h>
 
 class ResnetFaceDescriptor {
 public:
@@ -12,7 +11,6 @@ public:
     bool load(const std::string& modelDir);
     cv::Mat extract(const cv::Mat& image, const cv::Rect& face, std::vector<cv::Point2f>& landmark, cv::Mat* chip= nullptr);
     float distance(const cv::Mat& descriptor1, const cv::Mat& descriptor2);
-
 
 private:
     void* mResNet = nullptr;
