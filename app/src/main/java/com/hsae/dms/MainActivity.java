@@ -207,7 +207,9 @@ public class MainActivity extends Activity {
     public static boolean copyFiles(Context context) {
         String[] assetFiles = new String[] {
                 "kazemi_face_landmark.dat",
-                "resnet_face_descriptor.dat"
+                "resnet_face_descriptor.dat",
+                "action_classifier.prototxt",
+                "action_classifier.caffemodel"
         };
         boolean result = true;
         for(String file: assetFiles) {

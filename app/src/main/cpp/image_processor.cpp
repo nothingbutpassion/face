@@ -15,15 +15,14 @@
 using namespace std;
 using namespace cv;
 
-static void drawBoxes(const Mat& frame, int left, int top, int right, int bottom, float score, int index) {
-    rectangle(frame, Point(left, top), Point(right, bottom), CV_RGB(0, 255, 0));
-    string label = format("score: %.2f index: %d", score, index);
+static void drawBoxes(const Mat& frame, int left, int top, int right, int bottom, const string& label, const Scalar& color) {
+    rectangle(frame, Point(left, top), Point(right, bottom), color);
 
     int baseLine;
     Size labelSize = getTextSize(label, FONT_HERSHEY_SIMPLEX, 0.5, 1, &baseLine);
 
     top = max(top, labelSize.height);
-    rectangle(frame, Point(left, top - labelSize.height), Point(left + labelSize.width, top + baseLine), CV_RGB(0, 255, 0), FILLED);
+    rectangle(frame, Point(left, top - labelSize.height), Point(left + labelSize.width, top + baseLine), color, FILLED);
     putText(frame, label, Point(left, top), FONT_HERSHEY_SIMPLEX, 0.5, Scalar());
 }
 
@@ -46,13 +45,13 @@ static void drawLandmarks(Mat& image, const vector<Rect>& boxes, const vector<Po
 static void drawPoses(Mat& image, const vector<Point3f>& poses) {
     Point3f eulerAngle = poses[0];
     stringstream outtext;
-    outtext << "X: " << std::setprecision(3) << eulerAngle.x;
+    outtext << "x: " << std::setprecision(3) << eulerAngle.x;
     cv::putText(image, outtext.str(), cv::Point(4, 96), cv::FONT_HERSHEY_SIMPLEX, 0.75, cv::Scalar(255, 0, 0));
     outtext.str("");
-    outtext << "Y: " << std::setprecision(3) << eulerAngle.y;
+    outtext << "y: " << std::setprecision(3) << eulerAngle.y;
     cv::putText(image, outtext.str(), cv::Point(4, 120), cv::FONT_HERSHEY_SIMPLEX, 0.75, cv::Scalar(0, 255, 0));
     outtext.str("");
-    outtext << "Z: " << std::setprecision(3) << eulerAngle.z;
+    outtext << "z: " << std::setprecision(3) << eulerAngle.z;
     cv::putText(image, outtext.str(), cv::Point(4, 144), cv::FONT_HERSHEY_SIMPLEX, 0.75, cv::Scalar(0, 0, 255));
     outtext.str("");
 }
@@ -207,17 +206,21 @@ bool ImageProcessor::init(const string& modelDir) {
         return false;
     if (!mFaceLandmark.load(modelDir))
         return false;
+    if (!mActionClassifier.load(modelDir))
+        return false;
     if (!FaceRecongnizer::instance().init(modelDir))
         return false;
     return true;
 }
 
 void ImageProcessor::process(Mat& image) {
+
     Mat gray;
     Mat gray_hog;
     vector<Rect> boxes;
     vector<float> scores;
     vector<int> indices;
+
     cvtColor(image, gray, COLOR_RGBA2GRAY);
     resize(gray, gray_hog, gray.size()/2);
 
@@ -232,33 +235,61 @@ void ImageProcessor::process(Mat& image) {
         vector<Point2f> landmarks;
         mFaceLandmark.fit(gray, boxes[0], landmarks);
 
-        // Face recongnition
-        if (0 <= boxes[0].x && boxes[0].x < image.cols &&
-            boxes[0].x + boxes[0].width < image.cols &&
-            0 <= boxes[0].y && boxes[0].y < image.rows &&
-            boxes[0].y + boxes[0].height < image.rows &&
-            indices[0] == 0)
-            FaceRecongnizer::instance().setFace(image, boxes[0], landmarks);
+        Rect r = boxes[0];
+        int d = max(r.width, r.height)/5;
+        r.x -= d;
+        r.width += 2*d;
+        if (r.width > r.height + 3*d/2)
+            r.height += 3*d/2;
+        else
+            r.height = r.width;
+        r.x = max(0, r.x);
+        r.y = max(0, r.y);
+        r.width = min(r.width, image.cols-r.x);
+        r.height = min(r.height, image.rows-r.y);
 
-        // Pose estimation
-        vector<Point3f> poses;
-        Mat rvec;
-        Mat tvec;
-        mPoseEstimator.estimate(image, landmarks, poses, &rvec, &tvec);
-        drawPoses(image, poses);
-        drawAxis(image, mPoseEstimator.objectPoints(), mPoseEstimator.cameraMatrix(), mPoseEstimator.distCoeffs(), rvec, tvec);
+        Mat bgr;
+        cvtColor(image(r), bgr, COLOR_RGBA2BGR);
+        vector<float> actions;
+        mActionClassifier.predict(bgr, actions);
 
-        // Draw thumbnails
-        int currentPerson;
-        vector<Mat> persons;
-        FaceRecongnizer::instance().getPersons(currentPerson, persons);
-        drawThumbnails(image, currentPerson, persons);
+//        // Face recongnition
+//        if (0 <= boxes[0].x && boxes[0].x < image.cols &&
+//            boxes[0].x + boxes[0].width < image.cols &&
+//            0 <= boxes[0].y && boxes[0].y < image.rows &&
+//            boxes[0].y + boxes[0].height < image.rows &&
+//            indices[0] == 0)
+//            FaceRecongnizer::instance().setFace(image, boxes[0], landmarks);
+//
+//        // Pose estimation
+//        vector<Point3f> poses;
+//        Mat rvec;
+//        Mat tvec;
+//        mPoseEstimator.estimate(image.size(), landmarks, poses, &rvec, &tvec);
+//        drawPoses(image, poses);
+//        drawAxis(image, mPoseEstimator.objectPoints(), mPoseEstimator.cameraMatrix(), mPoseEstimator.distCoeffs(), rvec, tvec);
+
+//        // Draw thumbnails
+//        int currentPerson;
+//        vector<Mat> persons;
+//        FaceRecongnizer::instance().getPersons(currentPerson, persons);
+//        drawThumbnails(image, currentPerson, persons);
 
         // Draw face boxes
-        drawBoxes(image, boxes[0].x, boxes[0].y, boxes[0].x + boxes[0].width, boxes[0].y + boxes[0].height, scores[0], indices[0]);
+        //drawBoxes(image, boxes[0].x, boxes[0].y, boxes[0].x + boxes[0].width, boxes[0].y + boxes[0].height, scores[0], indices[0]);
+        Scalar smoking = cv::Scalar(255, 0, 0);
+        Scalar calling = cv::Scalar(255, 255, 0, 0);
+        Scalar normal = cv::Scalar(0, 255, 0, 0);
+        Scalar color = normal;
+        if (actions[0] > actions[1] && actions[0] > actions[2])
+            color = smoking;
+        else if (actions[1] > actions[0] && actions[1] > actions[2])
+            color = calling;
+        string label = format("face: %d action: %.3f, %.3f, %.3f", indices[0], actions[0], actions[1], actions[2]);
+        drawBoxes(image, r.x, r.y, r.x + r.width, r.y + r.height, label, color);
+
         // Draw landmarks
         drawLandmarks(image, boxes, landmarks);
-
     }
 
 }

@@ -98,13 +98,13 @@ void SimplePoseEstimator::project(const vector<Point3d>& objectPoints, const Mat
     projectPoints(objectPoints, rvec, tvec, mCameraMatrix, mDistCoeffs, imagePoints);
 }
 
-bool SimplePoseEstimator::estimate(const Mat& image, const vector<Point2f>& landmarks,
+bool SimplePoseEstimator::estimate(const Size& size, const vector<Point2f>& landmarks,
         vector<Point3f>& poses, Mat* rotation, cv::Mat* translation) {
     // NOTES:
     // We approximate Camera Matrix  with cx = half image width, cy = half image height, fx = cx/tan(60/2*PI/180), fy=fx
     if (mCameraMatrix.empty()) {
-        double cx = image.cols/2;
-        double cy = image.rows/2;
+        double cx = size.width/2;
+        double cy = size.height/2;
         double fx = cx/tan(3.1415926535/6);
         double fy = fx;
         double K[9] = {

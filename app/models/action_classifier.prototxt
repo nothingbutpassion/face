@@ -1,0 +1,255 @@
+input: "data"
+input_shape {
+  dim: 1
+  dim: 3
+  dim: 64
+  dim: 64
+}
+layer {
+  name: "separable_conv2d"
+  type: "Convolution"
+  bottom: "data"
+  top: "separable_conv2d"
+  convolution_param {
+    num_output: 3
+    bias_term: false
+    kernel_size: 3
+    group: 3
+    stride: 1
+  }
+}
+layer {
+  name: "separable_conv2d_"
+  type: "Convolution"
+  bottom: "separable_conv2d"
+  top: "separable_conv2d_"
+  convolution_param {
+    num_output: 32
+    bias_term: true
+    kernel_size: 1
+  }
+}
+layer {
+  name: "separable_conv2d_s"
+  type: "ReLU"
+  bottom: "separable_conv2d_"
+  top: "separable_conv2d_"
+}
+layer {
+  name: "separable_conv2d_1"
+  type: "Convolution"
+  bottom: "separable_conv2d_"
+  top: "separable_conv2d_1"
+  convolution_param {
+    num_output: 32
+    bias_term: false
+    kernel_size: 3
+    group: 32
+    stride: 1
+  }
+}
+layer {
+  name: "separable_conv2d_1_"
+  type: "Convolution"
+  bottom: "separable_conv2d_1"
+  top: "separable_conv2d_1_"
+  convolution_param {
+    num_output: 64
+    bias_term: true
+    kernel_size: 1
+  }
+}
+layer {
+  name: "separable_conv2d_1_s"
+  type: "ReLU"
+  bottom: "separable_conv2d_1_"
+  top: "separable_conv2d_1_"
+}
+layer {
+  name: "max_pooling2d"
+  type: "Pooling"
+  bottom: "separable_conv2d_1_"
+  top: "max_pooling2d"
+  pooling_param {
+    pool: MAX
+    kernel_size: 2
+    stride: 2
+  }
+}
+layer {
+  name: "separable_conv2d_2"
+  type: "Convolution"
+  bottom: "max_pooling2d"
+  top: "separable_conv2d_2"
+  convolution_param {
+    num_output: 64
+    bias_term: false
+    kernel_size: 3
+    group: 64
+    stride: 1
+  }
+}
+layer {
+  name: "separable_conv2d_2_"
+  type: "Convolution"
+  bottom: "separable_conv2d_2"
+  top: "separable_conv2d_2_"
+  convolution_param {
+    num_output: 64
+    bias_term: true
+    kernel_size: 1
+  }
+}
+layer {
+  name: "separable_conv2d_2_s"
+  type: "ReLU"
+  bottom: "separable_conv2d_2_"
+  top: "separable_conv2d_2_"
+}
+layer {
+  name: "separable_conv2d_3"
+  type: "Convolution"
+  bottom: "separable_conv2d_2_"
+  top: "separable_conv2d_3"
+  convolution_param {
+    num_output: 64
+    bias_term: false
+    kernel_size: 3
+    group: 64
+    stride: 1
+  }
+}
+layer {
+  name: "separable_conv2d_3_"
+  type: "Convolution"
+  bottom: "separable_conv2d_3"
+  top: "separable_conv2d_3_"
+  convolution_param {
+    num_output: 128
+    bias_term: true
+    kernel_size: 1
+  }
+}
+layer {
+  name: "separable_conv2d_3_s"
+  type: "ReLU"
+  bottom: "separable_conv2d_3_"
+  top: "separable_conv2d_3_"
+}
+layer {
+  name: "max_pooling2d_1"
+  type: "Pooling"
+  bottom: "separable_conv2d_3_"
+  top: "max_pooling2d_1"
+  pooling_param {
+    pool: MAX
+    kernel_size: 2
+    stride: 2
+  }
+}
+layer {
+  name: "separable_conv2d_4"
+  type: "Convolution"
+  bottom: "max_pooling2d_1"
+  top: "separable_conv2d_4"
+  convolution_param {
+    num_output: 128
+    bias_term: false
+    kernel_size: 3
+    group: 128
+    stride: 1
+  }
+}
+layer {
+  name: "separable_conv2d_4_"
+  type: "Convolution"
+  bottom: "separable_conv2d_4"
+  top: "separable_conv2d_4_"
+  convolution_param {
+    num_output: 64
+    bias_term: true
+    kernel_size: 1
+  }
+}
+layer {
+  name: "separable_conv2d_4_s"
+  type: "ReLU"
+  bottom: "separable_conv2d_4_"
+  top: "separable_conv2d_4_"
+}
+layer {
+  name: "separable_conv2d_5"
+  type: "Convolution"
+  bottom: "separable_conv2d_4_"
+  top: "separable_conv2d_5"
+  convolution_param {
+    num_output: 64
+    bias_term: false
+    kernel_size: 3
+    group: 64
+    stride: 1
+  }
+}
+layer {
+  name: "separable_conv2d_5_"
+  type: "Convolution"
+  bottom: "separable_conv2d_5"
+  top: "separable_conv2d_5_"
+  convolution_param {
+    num_output: 128
+    bias_term: true
+    kernel_size: 1
+  }
+}
+layer {
+  name: "separable_conv2d_5_s"
+  type: "ReLU"
+  bottom: "separable_conv2d_5_"
+  top: "separable_conv2d_5_"
+}
+layer {
+  name: "global_average_pooling2d"
+  type: "Pooling"
+  bottom: "separable_conv2d_5_"
+  top: "global_average_pooling2d"
+  pooling_param {
+    pool: AVE
+    global_pooling: true
+  }
+}
+layer {
+  name: "dense"
+  type: "InnerProduct"
+  bottom: "global_average_pooling2d"
+  top: "dense"
+  inner_product_param {
+    num_output: 32
+    weight_filler {
+      type: "xavier"
+    }
+  }
+}
+layer {
+  name: "denses"
+  type: "ReLU"
+  bottom: "dense"
+  top: "dense"
+}
+layer {
+  name: "dense_1"
+  type: "InnerProduct"
+  bottom: "dense"
+  top: "dense_1"
+  inner_product_param {
+    num_output: 3
+    weight_filler {
+      type: "xavier"
+    }
+  }
+}
+layer {
+  name: "dense_1s"
+  type: "Softmax"
+  bottom: "dense_1"
+  top: "dense_1"
+}
