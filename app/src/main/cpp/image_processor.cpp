@@ -287,7 +287,7 @@ void ImageProcessor::process(Mat& image) {
             color = calling;
         string label = format("face: %d action: %.3f, %.3f, %.3f", indices[0], actions[0], actions[1], actions[2]);
         drawBoxes(image, r.x, r.y, r.x + r.width, r.y + r.height, label, color);
-
+        
         // Draw landmarks
         drawLandmarks(image, boxes, landmarks);
     }
