@@ -201,6 +201,9 @@ ImageProcessor::~ImageProcessor() {
     FaceRecongnizer::instance().stop();
 }
 
+//static string saveDir;
+//static int numImages = 0;
+
 bool ImageProcessor::init(const string& modelDir) {
     if (!mFaceDetector.load(modelDir))
         return false;
@@ -210,7 +213,26 @@ bool ImageProcessor::init(const string& modelDir) {
         return false;
     if (!FaceRecongnizer::instance().init(modelDir))
         return false;
+
+    LOGD("model dir is %s", modelDir.c_str());
+//    saveDir = modelDir;
     return true;
+}
+
+Rect action_box(const Size& imgSize, const Rect& faceBox) {
+    Rect r = faceBox;
+    int d = max(r.width, r.height)/3;
+    r.x -= d;
+    r.width += 2*d;
+    if (r.width > r.height + 3*d/2)
+        r.height += 3*d/2;
+    else
+        r.height = r.width;
+    r.x = max(0, r.x);
+    r.y = max(0, r.y);
+    r.width = min(r.width, imgSize.width-r.x);
+    r.height = min(r.height, imgSize.height-r.y);
+    return r;
 }
 
 void ImageProcessor::process(Mat& image) {
@@ -235,24 +257,24 @@ void ImageProcessor::process(Mat& image) {
         vector<Point2f> landmarks;
         mFaceLandmark.fit(gray, boxes[0], landmarks);
 
-        Rect r = boxes[0];
-        int d = max(r.width, r.height)/5;
-        r.x -= d;
-        r.width += 2*d;
-        if (r.width > r.height + 3*d/2)
-            r.height += 3*d/2;
-        else
-            r.height = r.width;
-        r.x = max(0, r.x);
-        r.y = max(0, r.y);
-        r.width = min(r.width, image.cols-r.x);
-        r.height = min(r.height, image.rows-r.y);
-
-        Mat bgr;
-        cvtColor(image(r), bgr, COLOR_RGBA2BGR);
+        Mat rgba, bgr;
+        Rect r = action_box(image.size(), boxes[0]);
+        resize(image(r), rgba, Size(64, 64));
+        cvtColor(rgba, bgr, COLOR_RGBA2BGR);
         vector<float> actions;
         mActionClassifier.predict(bgr, actions);
 
+//        if (numImages < 100  &&
+//           (actions[0] > actions[1] && actions[0] > actions[2] || actions[1] > actions[0] && actions[1] > actions[2])) {
+//            string srcfile = saveDir + "/" + format("s_%03d_%.3f_%.3f_%.3f.jpg", numImages, actions[0], actions[1], actions[2]);
+//            string actfile = saveDir + "/" + format("a_%03d_%.3f_%.3f_%.3f.jpg", numImages, actions[0], actions[1], actions[2]);
+//            Mat srcimg;
+//            cvtColor(image, srcimg, COLOR_RGBA2BGR);
+//            bool srcOK = imwrite(srcfile.c_str(), srcimg);
+//            bool actOK = imwrite(actfile.c_str(), bgr);
+//            LOGD("save_images: status: %d,%d  path: %s,%s", srcOK, actOK, srcfile.c_str(), actfile.c_str());
+//            numImages++;
+//        }
 //        // Face recongnition
 //        if (0 <= boxes[0].x && boxes[0].x < image.cols &&
 //            boxes[0].x + boxes[0].width < image.cols &&
@@ -277,7 +299,7 @@ void ImageProcessor::process(Mat& image) {
 
         // Draw face boxes
         //drawBoxes(image, boxes[0].x, boxes[0].y, boxes[0].x + boxes[0].width, boxes[0].y + boxes[0].height, scores[0], indices[0]);
-        Scalar smoking = cv::Scalar(255, 0, 0);
+        Scalar smoking = cv::Scalar(255, 0, 0, 0);
         Scalar calling = cv::Scalar(255, 255, 0, 0);
         Scalar normal = cv::Scalar(0, 255, 0, 0);
         Scalar color = normal;
@@ -285,9 +307,11 @@ void ImageProcessor::process(Mat& image) {
             color = smoking;
         else if (actions[1] > actions[0] && actions[1] > actions[2])
             color = calling;
-        string label = format("face: %d action: %.3f, %.3f, %.3f", indices[0], actions[0], actions[1], actions[2]);
+        string label = format("actions: %.3f, %.3f, %.3f", actions[0], actions[1], actions[2]);
         drawBoxes(image, r.x, r.y, r.x + r.width, r.y + r.height, label, color);
-        
+
+
+
         // Draw landmarks
         drawLandmarks(image, boxes, landmarks);
     }

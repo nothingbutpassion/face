@@ -209,7 +209,8 @@ public class MainActivity extends Activity {
                 "kazemi_face_landmark.dat",
                 "resnet_face_descriptor.dat",
                 "action_classifier.prototxt",
-                "action_classifier.caffemodel"
+                "action_classifier.caffemodel",
+                "action_classifier.tflite"
         };
         boolean result = true;
         for(String file: assetFiles) {

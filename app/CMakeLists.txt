@@ -68,7 +68,8 @@ add_library(face SHARED
         src/main/cpp/image_processor.cpp
         src/main/cpp/hog_face_detector.cpp
         src/main/cpp/ssd_face_detector.cpp
-        src/main/cpp/action_classifier.cpp
+        src/main/cpp/caffe_action_classifier.cpp
+        src/main/cpp/tflite_action_classifier.cpp
         src/main/cpp/hao_face_detector.cpp
         src/main/cpp/resnet_face_descriptor.cpp
         src/main/cpp/kazemi_face_landmark.cpp
@@ -123,4 +124,8 @@ add_custom_command(
         COMMAND ${CMAKE_COMMAND} -E copy
             ${CMAKE_CURRENT_SOURCE_DIR}/models/action_classifier.caffemodel
             ${CMAKE_CURRENT_SOURCE_DIR}/src/main/assets/action_classifier.caffemodel
+
+        COMMAND ${CMAKE_COMMAND} -E copy
+            ${CMAKE_CURRENT_SOURCE_DIR}/models/action_classifier.tflite
+            ${CMAKE_CURRENT_SOURCE_DIR}/src/main/assets/action_classifier.tflite
         )

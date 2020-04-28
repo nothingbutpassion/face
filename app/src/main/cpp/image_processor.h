@@ -8,7 +8,8 @@
 #include "kazemi_face_landmark.h"
 #include "simple_pose_estimator.h"
 #include "resnet_face_descriptor.h"
-#include "action_classifier.h"
+#include "caffe_action_classifier.h"
+//#include "tflite_action_classifier.h"
 
 class ImageProcessor {
 public:
@@ -21,7 +22,7 @@ private:
     HOGFaceDetector mFaceDetector;
     KazemiFaceLandmark mFaceLandmark;
     SimplePoseEstimator mPoseEstimator;
-    ActionClassifier mActionClassifier;
+    CaffeActionClassifier mActionClassifier;
 };
 
 
