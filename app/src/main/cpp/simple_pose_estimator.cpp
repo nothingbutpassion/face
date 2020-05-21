@@ -11,6 +11,7 @@ using namespace cv;
 // NOTES:
 // 14 3D object points(world coordinates), the 3D head model comes from http://aifi.isr.uc.pt/Downloads/OpenGL/glAnthropometric3DModel.cpp
 // Also see https://github.com/lincolnhard/head-pose-estimation
+/*
 static vector<Point3d> kReferencePoints = {
         Point3d(6.825897, 6.760612, 4.402142),     //#33 left brow left corner
         Point3d(1.330353, 7.122144, 6.903745),     //#29 left brow right corner
@@ -27,6 +28,24 @@ static vector<Point3d> kReferencePoints = {
         Point3d(0.000000, -3.116408, 6.097667),    //#45 mouth central bottom corner
         Point3d(0.000000, -7.415691, 4.070434)     //#6 chin corner
 };
+*/
+static vector<Point3d> kReferencePoints = {
+        Point3d(-6.825897, 6.760612, 4.402142),     //#33 left brow left corner
+        Point3d(-1.330353, 7.122144, 6.903745),     //#29 left brow right corner
+        Point3d( 1.330353, 7.122144, 6.903745),     //#34 right brow left corner
+        Point3d( 6.825897, 6.760612, 4.402142),     //#38 right brow right corner
+        Point3d(-5.311432, 5.485328, 3.987654),     //#13 left eye left corner
+        Point3d(-1.789930, 5.393625, 4.413414),     //#17 left eye right corner
+        Point3d( 1.789930, 5.393625, 4.413414),     //#25 right eye left corner
+        Point3d( 5.311432, 5.485328, 3.987654),     //#21 right eye right corner
+        Point3d(-2.005628, 1.409845, 6.165652),     //#55 nose left corner
+        Point3d( 2.005628, 1.409845, 6.165652),     //#49 nose right corner
+        Point3d(-2.774015, -2.080775, 5.048531),    //#43 mouth left corner
+        Point3d( 2.774015, -2.080775, 5.048531),    //#39 mouth right corner
+        Point3d( 0.000000, -3.116408, 6.097667),    //#45 mouth central bottom corner
+        Point3d( 0.000000, -7.415691, 4.070434)     //#6 chin corner
+};
+
 
 static vector<double> projectErrors(const vector<Point3d>& objectPoints, const vector<Point2d>& imagePoints,
         const Mat& cameraMatrix, const Mat& distCoeffs, const Mat& rvec, const Mat& tvec) {
@@ -67,8 +86,11 @@ static void adjustObjectPoints(vector<Point3d>& objectPoints, const vector<Point
     std::vector<Point3d> grads = objectPointGrads(objectPoints, imagePoints, cameraMatrix, distCoeffs, rvec, tvec);
     vector<Point3d> points = objectPoints;
     constexpr double lr = 1e-2;
-    for (int i=0; i < points.size(); ++i) {
-        points[i] -= lr*grads[i];
+    constexpr double thresh = 4;
+    for (int i=0; i < points.size(); ++i) { 
+        Point3d d = points[i]- lr*grads[i] - kReferencePoints[i];
+        if (d.x*d.x + d.y*d.y + d.z*d.z < thresh)
+            points[i] -= lr*grads[i];
     }
     vector<double> refErrors = projectErrors(kReferencePoints, imagePoints, cameraMatrix, distCoeffs, rvec, tvec);
     vector<double> curErrors = projectErrors(objectPoints, imagePoints, cameraMatrix, distCoeffs, rvec, tvec);
@@ -99,13 +121,17 @@ void SimplePoseEstimator::project(const vector<Point3d>& objectPoints, const Mat
 }
 
 bool SimplePoseEstimator::estimate(const Size& size, const vector<Point2f>& landmarks,
-        vector<Point3f>& poses, Mat* rotation, cv::Mat* translation) {
+        Point3f& eulerAngle, Mat* rotation, cv::Mat* translation, bool adjust) {
     // NOTES:
     // We approximate Camera Matrix  with cx = half image width, cy = half image height, fx = cx/tan(60/2*PI/180), fy=fx
     if (mCameraMatrix.empty()) {
         double cx = size.width/2;
         double cy = size.height/2;
-        double fx = cx/tan(3.1415926535/6);
+
+        // NOTES:
+        // For hi3559av100 camera sensor, the FOV is about 30 degrees (cx/fx == 33/140)
+        // double fx = cx/tan(3.1415926535/6);
+        double fx = cx*4.24;
         double fy = fx;
         double K[9] = {
                 fx, 0.0, cx,
@@ -135,17 +161,12 @@ bool SimplePoseEstimator::estimate(const Size& size, const vector<Point2f>& land
             cv::Point2d(landmarks[8].x,  landmarks[8].y),  //#8 chin corner
     };
 
-    Mat rvec;
-    Mat tvec;
-
     // Get Rotation and Translation vector
-    solvePnP(mObjectPoints, imagePoints, mCameraMatrix, mDistCoeffs, rvec, tvec);
+    solvePnP(mObjectPoints, imagePoints, mCameraMatrix, mDistCoeffs, mRVec, mTVec);
 
     // Adjust object point coords by using "gradient descent" optimization
-    adjustObjectPoints(mObjectPoints, imagePoints, mCameraMatrix, mDistCoeffs, rvec, tvec);
-
-    // Only for Debuging
-//    drawAxis(const_cast<Mat&>(image), mObjectPoints, mCameraMatrix, mDistCoeffs, rvec, tvec);
+    if (adjust)
+        adjustObjectPoints(mObjectPoints, imagePoints, mCameraMatrix, mDistCoeffs, mRVec, mTVec);
 
     // Caculate Euler angles (Unit: degrees)
     Mat rotMatrix(3, 3, CV_64FC1);
@@ -154,14 +175,14 @@ bool SimplePoseEstimator::estimate(const Size& size, const vector<Point2f>& land
     Mat outRotMatrix(3, 3, CV_64FC1);
     Mat outTransVec(4, 1, CV_64FC1);
     Mat outEulerAngles(3, 1, CV_64FC1);
-    cv::Rodrigues(rvec, rotMatrix);
-    cv::hconcat(rotMatrix, tvec, projMatrix);
+    cv::Rodrigues(mRVec, rotMatrix);
+    cv::hconcat(rotMatrix, mTVec, projMatrix);
     decomposeProjectionMatrix(projMatrix, outCamMatrix, outRotMatrix, outTransVec, cv::noArray(), cv::noArray(), cv::noArray(), outEulerAngles);
-    poses.push_back(Point3f(outEulerAngles.at<double>(0), outEulerAngles.at<double>(1), outEulerAngles.at<double>(2)));
+    eulerAngle = Point3f(outEulerAngles.at<double>(0), outEulerAngles.at<double>(1), outEulerAngles.at<double>(2));
     if (rotation)
-        *rotation = rvec;
+        *rotation = mRVec;
     if (translation)
-        *translation = tvec;
+        *translation = mTVec;
     return true;
 }
 

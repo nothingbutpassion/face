@@ -8,7 +8,7 @@
 class CaffeActionClassifier {
 public:
     bool load(const std::string& modelDir);
-    void predict(const cv::Mat& image, std::vector<float>& results);
+    void predict(const cv::Mat& image, std::vector<float>& results, const cv::Scalar& meanBGR=cv::Scalar(76, 89, 103));
 
 private:
     cv::dnn::Net mClassifierNet;

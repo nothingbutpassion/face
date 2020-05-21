@@ -17,10 +17,8 @@ using namespace cv;
 
 static void drawBoxes(const Mat& frame, int left, int top, int right, int bottom, const string& label, const Scalar& color) {
     rectangle(frame, Point(left, top), Point(right, bottom), color);
-
     int baseLine;
     Size labelSize = getTextSize(label, FONT_HERSHEY_SIMPLEX, 0.5, 1, &baseLine);
-
     top = max(top, labelSize.height);
     rectangle(frame, Point(left, top - labelSize.height), Point(left + labelSize.width, top + baseLine), color, FILLED);
     putText(frame, label, Point(left, top), FONT_HERSHEY_SIMPLEX, 0.5, Scalar());
@@ -42,18 +40,16 @@ static void drawLandmarks(Mat& image, const vector<Rect>& boxes, const vector<Po
     }
 }
 
-static void drawPoses(Mat& image, const vector<Point3f>& poses) {
-    Point3f eulerAngle = poses[0];
+static void drawPoses(Mat& image, const Point3f& eulerAngle) {
     stringstream outtext;
-    outtext << "x: " << std::setprecision(3) << eulerAngle.x;
+    outtext << "x-rotation: " << std::setprecision(3) << eulerAngle.x;
     cv::putText(image, outtext.str(), cv::Point(4, 96), cv::FONT_HERSHEY_SIMPLEX, 0.75, cv::Scalar(255, 0, 0));
     outtext.str("");
-    outtext << "y: " << std::setprecision(3) << eulerAngle.y;
+    outtext << "y-rotation: " << std::setprecision(3) << eulerAngle.y;
     cv::putText(image, outtext.str(), cv::Point(4, 120), cv::FONT_HERSHEY_SIMPLEX, 0.75, cv::Scalar(0, 255, 0));
     outtext.str("");
-    outtext << "z: " << std::setprecision(3) << eulerAngle.z;
+    outtext << "z-rotation: " << std::setprecision(3) << eulerAngle.z;
     cv::putText(image, outtext.str(), cv::Point(4, 144), cv::FONT_HERSHEY_SIMPLEX, 0.75, cv::Scalar(0, 0, 255));
-    outtext.str("");
 }
 
 static void drawAxis(Mat& image, const vector<Point3d>& objectPoints, const Mat& cameraMatrix, const Mat& distCoeffs, const Mat& rvec, const Mat& tvec) {
@@ -219,7 +215,22 @@ bool ImageProcessor::init(const string& modelDir) {
     return true;
 }
 
-Rect action_box(const Size& imgSize, const Rect& faceBox) {
+Rect correct_box(const Size& imgSize, const vector<Point2f>& landmarks) {
+    int x_min = landmarks[1].x;
+    int x_max = landmarks[15].x;
+    int y_min = landmarks[19].y;
+    int y_max = landmarks[8].y;
+    y_min = y_min - (y_max - y_min) / 6;
+    Rect r;
+    r.x = max(x_min, 0);
+    r.y = max(y_min, 0);
+    r.width = min(x_max-x_min+1, imgSize.width - r.x);
+    r.height = min(y_max-y_min+1, imgSize.height - r.y);
+    return r;
+}
+
+
+Rect extend_box(const Size& imgSize, const Rect& faceBox) {
     Rect r = faceBox;
     int d = max(r.width, r.height)/3;
     r.x -= d;
@@ -258,12 +269,17 @@ void ImageProcessor::process(Mat& image) {
         mFaceLandmark.fit(gray, boxes[0], landmarks);
 
         Mat rgba, bgr;
-        Rect r = action_box(image.size(), boxes[0]);
-        resize(image(r), rgba, Size(64, 64));
+        Rect box = correct_box(image.size(), landmarks);
+        Rect roi = extend_box(image.size(), box);
+        resize(image(roi), rgba, Size(64, 64));
         cvtColor(rgba, bgr, COLOR_RGBA2BGR);
-        vector<float> actions;
-        mActionClassifier.predict(bgr, actions);
 
+        static Scalar meanBRG;
+        static double count = 0;
+        if (count++ < 1024)
+            meanBRG = ((count-1)*meanBRG + mean(bgr))/count;
+        vector<float> actions;
+        mActionClassifier.predict(bgr, actions, meanBRG);
 //        if (numImages < 100  &&
 //           (actions[0] > actions[1] && actions[0] > actions[2] || actions[1] > actions[0] && actions[1] > actions[2])) {
 //            string srcfile = saveDir + "/" + format("s_%03d_%.3f_%.3f_%.3f.jpg", numImages, actions[0], actions[1], actions[2]);
@@ -284,13 +300,11 @@ void ImageProcessor::process(Mat& image) {
 //            FaceRecongnizer::instance().setFace(image, boxes[0], landmarks);
 //
 //        // Pose estimation
-//        vector<Point3f> poses;
-//        Mat rvec;
-//        Mat tvec;
-//        mPoseEstimator.estimate(image.size(), landmarks, poses, &rvec, &tvec);
+        Point3f poses;
+        mPoseEstimator.estimate(image.size(), landmarks, poses);
 //        drawPoses(image, poses);
-//        drawAxis(image, mPoseEstimator.objectPoints(), mPoseEstimator.cameraMatrix(), mPoseEstimator.distCoeffs(), rvec, tvec);
-
+        drawAxis(image, mPoseEstimator.objectPoints(), mPoseEstimator.cameraMatrix(),
+                mPoseEstimator.distCoeffs(), mPoseEstimator.rvec(), mPoseEstimator.tvec());
 //        // Draw thumbnails
 //        int currentPerson;
 //        vector<Mat> persons;
@@ -303,14 +317,12 @@ void ImageProcessor::process(Mat& image) {
         Scalar calling = cv::Scalar(255, 255, 0, 0);
         Scalar normal = cv::Scalar(0, 255, 0, 0);
         Scalar color = normal;
-        if (actions[0] > actions[1] && actions[0] > actions[2])
+        if (actions[0] > actions[1] && actions[0] > actions[2] && count > 1024)
             color = smoking;
-        else if (actions[1] > actions[0] && actions[1] > actions[2])
+        else if (actions[1] > actions[0] && actions[1] > actions[2] && count > 1024)
             color = calling;
         string label = format("actions: %.3f, %.3f, %.3f", actions[0], actions[1], actions[2]);
-        drawBoxes(image, r.x, r.y, r.x + r.width, r.y + r.height, label, color);
-
-
+        drawBoxes(image, box.x, box.y, box.x + box.width, box.y + box.height, label, color);
 
         // Draw landmarks
         drawLandmarks(image, boxes, landmarks);
