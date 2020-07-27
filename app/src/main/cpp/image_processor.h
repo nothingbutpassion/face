@@ -7,8 +7,8 @@
 #include "hog_face_detector.h"
 #include "kazemi_face_landmark.h"
 #include "simple_pose_estimator.h"
-#include "resnet_face_descriptor.h"
 #include "caffe_smoking_classifier.h"
+#include "caffe_calling_classifier.h"
 
 class ImageProcessor {
 public:
@@ -22,6 +22,7 @@ private:
     KazemiFaceLandmark mFaceLandmark;
     SimplePoseEstimator mPoseEstimator;
     CaffeSmokingClassifier mSmokingClassifier;
+    CaffeCallingClassifier mCallingClassifier;
 };
 
 

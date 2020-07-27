@@ -20,8 +20,7 @@ android {
             cmake {
                 cppFlags "-std=c++11 -O3"
                 //cppFlags "-std=c++11 -frtti -fexceptions"
-                //arguments "-DANDROID_STL=c++_shared"
-                arguments "-DANDROID_ARM_NEON=TRUE"
+                arguments "-DANDROID_STL=c++_shared", "-DANDROID_ARM_NEON=TRUE"
             }
         }
         ndk {

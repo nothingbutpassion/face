@@ -207,6 +207,8 @@ public class MainActivity extends Activity {
                 "kazemi_face_landmark.dat",
                 "smoking_classifier.prototxt",
                 "smoking_classifier.caffemodel",
+                "calling_classifier.prototxt",
+                "calling_classifier.caffemodel",
         };
         boolean result = true;
         for(String file: assetFiles) {

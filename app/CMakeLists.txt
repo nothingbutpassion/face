@@ -32,10 +32,13 @@ cmake_minimum_required(VERSION 3.4.1)
 
 # NOTES:
 # Set OPENCV_INC_DIR/OPENCV_LIB_DIR as OpenCV include/libs directory
-# ${ANDROID_ABI} is set by gradle. see .externalNativeBuild/cmake/<debug or release>/<abi>/cmake_build_command.txt
-set(OPENCV_INC_DIR "Z:/opencv/build_for_android_arm64-v8a/install/sdk/native/jni/include")
-set(OPENCV_LIB_DIR "Z:/opencv/build_for_android_arm64-v8a/install/sdk/native/libs/${ANDROID_ABI}")
-set(OPENCV_LIBS opencv_core opencv_imgproc opencv_imgcodecs opencv_dnn opencv_calib3d opencv_features2d opencv_flann)
+# ${ANDROID_ABI} is set by gradle. see */cmake/<debug or release>/<abi>/cmake_build_command.txt
+#set(OPENCV_INC_DIR "Z:/opencv/build_for_android_arm64-v8a/install/sdk/native/jni/include")
+#set(OPENCV_LIB_DIR "Z:/opencv/build_for_android_arm64-v8a/install/sdk/native/libs/${ANDROID_ABI}")
+#set(OPENCV_LIBS opencv_core opencv_imgproc opencv_imgcodecs opencv_dnn opencv_calib3d opencv_features2d opencv_flann)
+set(OPENCV_INC_DIR "D:/share/opencv-4.3.0-android-sdk/sdk/native/jni/include")
+set(OPENCV_LIB_DIR "D:/share/opencv-4.3.0-android-sdk/sdk/native/libs/${ANDROID_ABI}")
+set(OPENCV_LIBS opencv_java4)
 
 foreach(name in ${OPENCV_LIBS})
     add_library(${name} SHARED IMPORTED )
@@ -71,6 +74,7 @@ add_library(face SHARED
         src/main/cpp/tflite_action_classifier.cpp
         src/main/cpp/caffe_action_classifier.cpp
         src/main/cpp/caffe_smoking_classifier.cpp
+        src/main/cpp/caffe_calling_classifier.cpp
         src/main/cpp/hao_face_detector.cpp
         src/main/cpp/resnet_face_descriptor.cpp
         src/main/cpp/kazemi_face_landmark.cpp
@@ -121,4 +125,11 @@ add_custom_command(
         COMMAND ${CMAKE_COMMAND} -E copy
                 ${CMAKE_CURRENT_SOURCE_DIR}/models/smoking_classifier.caffemodel
                 ${CMAKE_CURRENT_SOURCE_DIR}/src/main/assets/smoking_classifier.caffemodel
+
+        COMMAND ${CMAKE_COMMAND} -E copy
+                ${CMAKE_CURRENT_SOURCE_DIR}/models/calling_classifier.prototxt
+                ${CMAKE_CURRENT_SOURCE_DIR}/src/main/assets/calling_classifier.prototxt
+        COMMAND ${CMAKE_COMMAND} -E copy
+                ${CMAKE_CURRENT_SOURCE_DIR}/models/calling_classifier.caffemodel
+                ${CMAKE_CURRENT_SOURCE_DIR}/src/main/assets/calling_classifier.caffemodel
         )
