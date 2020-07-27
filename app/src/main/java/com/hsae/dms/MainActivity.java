@@ -22,8 +22,6 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.lang.annotation.Native;
-import java.util.concurrent.ConcurrentLinkedQueue;
 
 public class MainActivity extends Activity {
     private final String TAG = "face MainActivity";
@@ -207,10 +205,8 @@ public class MainActivity extends Activity {
     public static boolean copyFiles(Context context) {
         String[] assetFiles = new String[] {
                 "kazemi_face_landmark.dat",
-                "resnet_face_descriptor.dat",
-                "action_classifier.prototxt",
-                "action_classifier.caffemodel",
-                "action_classifier.tflite"
+                "smoking_classifier.prototxt",
+                "smoking_classifier.caffemodel",
         };
         boolean result = true;
         for(String file: assetFiles) {
@@ -220,5 +216,4 @@ public class MainActivity extends Activity {
         }
         return result;
     }
-
 }

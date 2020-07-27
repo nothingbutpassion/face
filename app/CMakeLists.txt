@@ -68,8 +68,9 @@ add_library(face SHARED
         src/main/cpp/image_processor.cpp
         src/main/cpp/hog_face_detector.cpp
         src/main/cpp/ssd_face_detector.cpp
-        src/main/cpp/caffe_action_classifier.cpp
         src/main/cpp/tflite_action_classifier.cpp
+        src/main/cpp/caffe_action_classifier.cpp
+        src/main/cpp/caffe_smoking_classifier.cpp
         src/main/cpp/hao_face_detector.cpp
         src/main/cpp/resnet_face_descriptor.cpp
         src/main/cpp/kazemi_face_landmark.cpp
@@ -115,17 +116,9 @@ add_custom_command(
                 ${CMAKE_CURRENT_SOURCE_DIR}/models/kazemi_face_landmark.dat
                 ${CMAKE_CURRENT_SOURCE_DIR}/src/main/assets/kazemi_face_landmark.dat
         COMMAND ${CMAKE_COMMAND} -E copy
-                ${CMAKE_CURRENT_SOURCE_DIR}/models/resnet_face_descriptor.dat
-                ${CMAKE_CURRENT_SOURCE_DIR}/src/main/assets/resnet_face_descriptor.dat
-
+                ${CMAKE_CURRENT_SOURCE_DIR}/models/smoking_classifier.prototxt
+                ${CMAKE_CURRENT_SOURCE_DIR}/src/main/assets/smoking_classifier.prototxt
         COMMAND ${CMAKE_COMMAND} -E copy
-            ${CMAKE_CURRENT_SOURCE_DIR}/models/action_classifier.prototxt
-            ${CMAKE_CURRENT_SOURCE_DIR}/src/main/assets/action_classifier.prototxt
-        COMMAND ${CMAKE_COMMAND} -E copy
-            ${CMAKE_CURRENT_SOURCE_DIR}/models/action_classifier.caffemodel
-            ${CMAKE_CURRENT_SOURCE_DIR}/src/main/assets/action_classifier.caffemodel
-
-        COMMAND ${CMAKE_COMMAND} -E copy
-            ${CMAKE_CURRENT_SOURCE_DIR}/models/action_classifier.tflite
-            ${CMAKE_CURRENT_SOURCE_DIR}/src/main/assets/action_classifier.tflite
+                ${CMAKE_CURRENT_SOURCE_DIR}/models/smoking_classifier.caffemodel
+                ${CMAKE_CURRENT_SOURCE_DIR}/src/main/assets/smoking_classifier.caffemodel
         )

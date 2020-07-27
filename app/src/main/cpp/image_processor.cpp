@@ -1,4 +1,5 @@
 #include <unistd.h>
+#include <cmath>
 #include <vector>
 #include <tuple>
 #include <sstream>
@@ -24,19 +25,19 @@ static void drawBoxes(const Mat& frame, int left, int top, int right, int bottom
     putText(frame, label, Point(left, top), FONT_HERSHEY_SIMPLEX, 0.5, Scalar());
 }
 
-static void drawLandmarks(Mat& image, const vector<Rect>& boxes, const vector<Point2f>& landmark) {
+static void drawLandmarks(Mat& image, const vector<Point2f>& landmarks) {
 //    vector<Scalar> colors(68);
 //    for (int i=0; i <= 16; ++i) colors[i] =  CV_RGB(255,0,0);  // 0 - 16 is profile      17 points
 //    for (int i=17; i <= 21; ++i) colors[i] = CV_RGB(255,0,0);  // 17 - 21 left eyebrow    5 points
 //    for (int i=22; i <= 26; ++i) colors[i] = CV_RGB(255,0,0);  // 22 - 26 right eyebrow   5 points
 //    for (int i=27; i <= 30; ++i) colors[i] = CV_RGB(255,0,0);  // 27 - 30 nose bridge     4 points
 //    for (int i=31; i <= 35; ++i) colors[i] = CV_RGB(255,0,0);  // 31 - 35 nose hole       5 points
-//    for (int i=36; i <= 41; ++i) colors[i] = CV_RGB(0,0,255);    // 36 - 41 left eye        6 points
-//    for (int i=42; i <= 47; ++i) colors[i] = CV_RGB(0,0,255);    // 42 - 47 right eye       6 points
-//    for (int i=48; i <= 67; ++i) colors[i] = CV_RGB(255,0,0);    // 48 - 67 mouth           20 points
-    for (int i = 0; i < landmark.size(); ++i) {
-        circle(image, landmark[i], 2, CV_RGB(255, 0, 0), -1);
-        //circle(image, landmarks[i][j], 2, colors[j], -1);
+//    for (int i=36; i <= 41; ++i) colors[i] = CV_RGB(0,0,255);  // 36 - 41 left eye        6 points
+//    for (int i=42; i <= 47; ++i) colors[i] = CV_RGB(0,0,255);  // 42 - 47 right eye       6 points
+//    for (int i=48; i <= 67; ++i) colors[i] = CV_RGB(255,0,0);  // 48 - 67 mouth           20 points
+    for (int i = 0; i < landmarks.size(); ++i) {
+        circle(image, landmarks[i], 2, CV_RGB(255, 0, 0), -1);
+        //circle(image, landmarks[i], 2, colors[i], -1);
     }
 }
 
@@ -70,148 +71,19 @@ static void drawAxis(Mat& image, const vector<Point3d>& objectPoints, const Mat&
     line(image, outPoints[0], outPoints[3], CV_RGB(0, 0, 255), 2, LINE_AA);
 }
 
-static void drawThumbnails(Mat& image, int currentPersion, vector<Mat>& persons) {
-    constexpr int w = 64;
-    constexpr int h = 64;
-    int nx = image.cols/w;
-    int px = (image.cols%w)/2;
-    int ny = image.rows/h;
-    int py = (image.rows%h)/2;
-    for (int k=0; k < persons.size(); ++k) {
-        int y = k/nx;
-        int x = k%nx;
-        px = px > 4 ? 4 : px;
-        py = py > 4 ? 4 : py;
-        Rect rect(px+x*w, py+y*h, w, h);
-        Mat person;
-        cvtColor(persons[k], person, COLOR_RGB2RGBA);
-        resize(person, image(rect), Size(rect.width, rect.height));
-        if (k == currentPersion)
-            rectangle(image, rect, CV_RGB(0, 255, 0), 2);
-    }
-}
-
-struct FaceRecongnizer {
-    static FaceRecongnizer& instance() {
-        static FaceRecongnizer recongnizer;
-        return recongnizer;
-    }
-    bool init(const string& modelDir) {
-        mInit = mDescriptor.load(modelDir);
-        if (mInit)
-            start();
-        return mInit;
-    }
-    void start() {
-        mThreadExit = false;
-        mThread = thread(&FaceRecongnizer::recognize, this);
-    }
-    void stop() {
-        mThreadExit = true;
-        if (mInit)
-            mThread.join();
-    }
-    void setFace(const Mat& img, const Rect& box, const vector<Point2f>& landmarks) {
-        // LOGD("set image: %dx%d, box: (%d,%d,%d,%d)", img.cols, img.rows, box.x, box.y, box.width, box.height);
-        lock_guard<mutex> lock(mMutex);
-        cvtColor(img, mImage, COLOR_RGBA2RGB);
-        mBox = box;
-        mLandmarks = landmarks;
-    }
-    void getPersons(int& currentPersion, vector<Mat>& persons) {
-        lock_guard<mutex> lock(mMutex);
-        currentPersion = mCurrentPerson;
-        for (auto p: mPersons)
-            persons.push_back(get<1>(p));
-    }
-    void recognize() {
-        while (!mThreadExit) {
-            Mat img;
-            Rect box;
-            vector<Point2f> landmarks;
-
-            mMutex.lock();
-            img = mImage;
-            mImage = Mat();
-            box = mBox;
-            landmarks = mLandmarks;
-            mMutex.unlock();
-
-            if (!img.data) {
-                usleep(100000);
-                continue;
-            }
-            //LOGD("get image: %dx%d, box: (%d,%d,%d,%d)", img.cols, img.rows, box.x, box.y, box.width, box.height);
-            LOGD("face recongnition start");
-            Mat chip;
-            Mat descriptor = mDescriptor.extract(img, box, landmarks, &chip);
-            LOGD("face recongnition end");
-
-            if (mPersons.size() == 0) {
-                lock_guard<mutex> lock(mMutex);
-                mPersons.push_back(make_tuple(descriptor, chip));
-                mCurrentPerson = 0;
-                LOGD("person %d detected", mCurrentPerson);
-                continue;
-            }
-            int found = -1;
-            float min = 1;
-            for (int i=0; i < mPersons.size(); ++i) {
-                float d = mDescriptor.distance(get<0>(mPersons[i]), descriptor);
-                LOGD("distance with person %d: %f", i, d);
-                if (d < 0.4 && d < min) {
-                    min = d;
-                    found = i;
-                    mCurrentPerson = found;
-                    LOGD("person %d matched (distance=%f)", mCurrentPerson, d);
-                }
-            }
-            if (found != -1) {
-                mPersons[found] = make_tuple(descriptor, chip);
-            } else {
-                lock_guard<mutex> lock(mMutex);
-                mPersons.push_back(make_tuple(descriptor, chip));
-                mCurrentPerson = mPersons.size() - 1;
-                LOGD("new person %d detected", mCurrentPerson);
-            }
-        }
-    }
-private:
-    ResnetFaceDescriptor mDescriptor;
-    bool mInit = false;
-    Mat mImage;
-    Rect mBox;
-    vector<Point2f> mLandmarks;
-    vector<tuple<Mat, Mat>>  mPersons;
-    int mCurrentPerson = -1;
-    mutex mMutex;
-    thread mThread;
-    bool mThreadExit = false;
-};
 
 
-ImageProcessor::ImageProcessor() {
-}
-
-ImageProcessor::~ImageProcessor() {
-    FaceRecongnizer::instance().stop();
-}
-
-//static string saveDir;
-//static int numImages = 0;
+ImageProcessor::ImageProcessor() {}
+ImageProcessor::~ImageProcessor() {}
 
 bool ImageProcessor::init(const string& modelDir) {
     if (!mFaceDetector.load(modelDir))
         return false;
     if (!mFaceLandmark.load(modelDir))
         return false;
-    if (!mActionClassifier.load(modelDir))
+    if (!mSmokingClassifier.load(modelDir))
         return false;
-    if (!FaceRecongnizer::instance().init(modelDir))
-        return false;
-
-    LOGD("model dir is %s", modelDir.c_str());
-//    saveDir = modelDir;
+    LOGD("All model file is loaded from %s", modelDir.c_str());
     return true;
 }
 
@@ -246,8 +118,44 @@ Rect extend_box(const Size& imgSize, const Rect& faceBox) {
     return r;
 }
 
-void ImageProcessor::process(Mat& image) {
+Mat get_smoking_image(const Mat& image, const vector<Point2f>& landmarks) {
+    Point2f leftEye(0, 0);
+    Point2f rightEye(0, 0);
+    for (int i = 42; i < 48; ++i)
+        leftEye += landmarks[i];
+    for (int i = 36; i < 42; ++i)
+        rightEye += landmarks[i];
+    Point2f center((rightEye.x+leftEye.x)/12, (rightEye.y+leftEye.y)/12);
+    float angle = atan2f(rightEye.y-leftEye.y, rightEye.x-leftEye.x)*180/3.1415926535 + 180;
+    Mat M = getRotationMatrix2D(center, angle, 1.0);
+    vector<Point2f> marks;
+    float x_max = -1000000;
+    float x_min = 1000000;
+    for (const Point2f& p: landmarks) {
+        float x = p.x*M.at<double>(0, 0) + p.y*M.at<double>(0, 1) + M.at<double>(0, 2);
+        float y = p.x*M.at<double>(1, 0) + p.y*M.at<double>(1, 1) + M.at<double>(1, 2);
+        x_max = max(x, x_max);
+        x_min = min(x, x_min);
+        marks.push_back(Point2f(x, y));
+    }
+    float x0 = marks[33].x;
+    float y0 = marks[33].y;
+    float w = 0.6*(x_max - x_min);
+    float h = min(w*2/3,  image.cols - y0);
+    M.at<double>(0,2) -= (x0 - 0.5*w);
+    M.at<double>(1,2) -= y0;
+    M.at<double>(0,0) *= 64/w;
+    M.at<double>(0,1) *= 64/w;
+    M.at<double>(0,2) *= 64/w;
+    M.at<double>(1,0) *= 64/h;
+    M.at<double>(1,1) *= 64/h;
+    M.at<double>(1,2) *= 64/h;
+    Mat dst;
+    warpAffine(image, dst, M, Size(64, 64), INTER_CUBIC);
+    return dst;
+}
 
+void ImageProcessor::process(Mat& image) {
     Mat gray;
     Mat gray_hog;
     vector<Rect> boxes;
@@ -265,67 +173,34 @@ void ImageProcessor::process(Mat& image) {
         b.height *= 2;
     }
     if (boxes.size() > 0) {
+        Rect box = boxes[0];
         vector<Point2f> landmarks;
-        mFaceLandmark.fit(gray, boxes[0], landmarks);
+        mFaceLandmark.fit(gray, box, landmarks);
 
-        Mat rgba, bgr;
-        Rect box = correct_box(image.size(), landmarks);
-        Rect roi = extend_box(image.size(), box);
-        resize(image(roi), rgba, Size(64, 64));
-        cvtColor(rgba, bgr, COLOR_RGBA2BGR);
-
-        static Scalar meanBRG;
-        static double count = 0;
-        if (count++ < 1024)
-            meanBRG = ((count-1)*meanBRG + mean(bgr))/count;
+        Mat smoking_image = get_smoking_image(gray, landmarks);
         vector<float> actions;
-        mActionClassifier.predict(bgr, actions, meanBRG);
-//        if (numImages < 100  &&
-//           (actions[0] > actions[1] && actions[0] > actions[2] || actions[1] > actions[0] && actions[1] > actions[2])) {
-//            string srcfile = saveDir + "/" + format("s_%03d_%.3f_%.3f_%.3f.jpg", numImages, actions[0], actions[1], actions[2]);
-//            string actfile = saveDir + "/" + format("a_%03d_%.3f_%.3f_%.3f.jpg", numImages, actions[0], actions[1], actions[2]);
-//            Mat srcimg;
-//            cvtColor(image, srcimg, COLOR_RGBA2BGR);
-//            bool srcOK = imwrite(srcfile.c_str(), srcimg);
-//            bool actOK = imwrite(actfile.c_str(), bgr);
-//            LOGD("save_images: status: %d,%d  path: %s,%s", srcOK, actOK, srcfile.c_str(), actfile.c_str());
-//            numImages++;
-//        }
-//        // Face recongnition
-//        if (0 <= boxes[0].x && boxes[0].x < image.cols &&
-//            boxes[0].x + boxes[0].width < image.cols &&
-//            0 <= boxes[0].y && boxes[0].y < image.rows &&
-//            boxes[0].y + boxes[0].height < image.rows &&
-//            indices[0] == 0)
-//            FaceRecongnizer::instance().setFace(image, boxes[0], landmarks);
-//
-//        // Pose estimation
-        Point3f poses;
-        mPoseEstimator.estimate(image.size(), landmarks, poses);
-//        drawPoses(image, poses);
+        mSmokingClassifier.predict(smoking_image, actions);
+
+        // Pose estimation
+        Point3f pose;
+        mPoseEstimator.estimate(image.size(), landmarks, pose);
         drawAxis(image, mPoseEstimator.objectPoints(), mPoseEstimator.cameraMatrix(),
                 mPoseEstimator.distCoeffs(), mPoseEstimator.rvec(), mPoseEstimator.tvec());
-//        // Draw thumbnails
-//        int currentPerson;
-//        vector<Mat> persons;
-//        FaceRecongnizer::instance().getPersons(currentPerson, persons);
-//        drawThumbnails(image, currentPerson, persons);
 
         // Draw face boxes
-        //drawBoxes(image, boxes[0].x, boxes[0].y, boxes[0].x + boxes[0].width, boxes[0].y + boxes[0].height, scores[0], indices[0]);
         Scalar smoking = cv::Scalar(255, 0, 0, 0);
         Scalar calling = cv::Scalar(255, 255, 0, 0);
         Scalar normal = cv::Scalar(0, 255, 0, 0);
         Scalar color = normal;
-        if (actions[0] > actions[1] && actions[0] > actions[2] && count > 1024)
+        if (actions[0] > 0.8)
             color = smoking;
-        else if (actions[1] > actions[0] && actions[1] > actions[2] && count > 1024)
+        else if (actions[1] > 0.8)
             color = calling;
-        string label = format("actions: %.3f, %.3f, %.3f", actions[0], actions[1], actions[2]);
+        string label = format("action: %.2f, %.2f, %.2f", actions[0], actions[1], actions[2]);
         drawBoxes(image, box.x, box.y, box.x + box.width, box.y + box.height, label, color);
 
         // Draw landmarks
-        drawLandmarks(image, boxes, landmarks);
+        drawLandmarks(image, landmarks);
     }
 
 }
