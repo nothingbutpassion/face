@@ -21,7 +21,7 @@ void CaffeCallingClassifier::predict(const Mat& gray, vector<float>& results) {
     Scalar mean;
     Scalar stddev;
     meanStdDev(gray, mean, stddev);
-    double scale = 1.0 / stddev[0];
+    double scale = 1.0 / (stddev[0] + 1e-7);
     Size inputSize(64, 64);
     Mat blob = dnn::blobFromImage(gray, scale, inputSize, mean, false, false);
     mClassifierNet.setInput(blob);
