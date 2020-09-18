@@ -1,8 +1,8 @@
 #include <opencv2/imgproc.hpp>
-#include <dlib/image_processing.h>
 #include <dlib/dnn.h>
 #include <dlib/opencv/cv_image.h>
 #include <dlib/opencv.h>
+#include <dlib/image_processing.h>
 #include "utils.h"
 #include "resnet_face_descriptor.h"
 
@@ -73,10 +73,7 @@ bool ResnetFaceDescriptor::load(const std::string& modelDir) {
     return isOk;
 }
 
-cv::Mat ResnetFaceDescriptor::extract(const cv::Mat& image, const cv::Rect& face, std::vector<cv::Point2f>& landmark, cv::Mat* chip) {
-    Mat rgb;
-    cv::cvtColor(image, rgb, cv::COLOR_RGBA2RGB);
-
+cv::Mat ResnetFaceDescriptor::extract(const cv::Mat& rgb, const cv::Rect& face, std::vector<cv::Point2f>& landmark, cv::Mat* chip) {
     std::vector<dlib::point> parts;
     for (auto p: landmark)
         parts.push_back(dlib::point(p.x, p.y));
@@ -88,7 +85,7 @@ cv::Mat ResnetFaceDescriptor::extract(const cv::Mat& image, const cv::Rect& face
     anet_type& net = *static_cast<anet_type*>(mResNet);
     std::vector<matrix<float,0,1>> face_descriptors = net(face_chips);
     if (chip)
-        cv::cvtColor(dlib::toMat(face_chips[0]), *chip, cv::COLOR_RGB2RGBA);
+        dlib::toMat(face_chips[0]).copyTo(*chip);
     Mat descriptor;
     dlib::toMat(face_descriptors[0]).copyTo(descriptor);
     return descriptor;

@@ -11,7 +11,7 @@ import java.nio.ByteBuffer;
 import java.util.List;
 
 public class CameraUtils {
-    private final static String TAG = "CameraUtils";
+    private final static String TAG = "face CameraUtils";
     private Camera mCamera;
     private CaptureListener mCaptureListener;
     private int mCaptureFps = 15;

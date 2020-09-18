@@ -23,11 +23,10 @@ bool LBFFaceLandmark::load(const string& modelDir) {
 }
 
 bool LBFFaceLandmark::fit(const Mat& image, const vector<Rect>& faces, vector<vector<Point2f>>& landmarks) {
-    bool ret = mFacemark->fit(image, faces, landmarks);
     if (!mFacemark->fit(image, faces, landmarks)) {
         LOGE("fit failed");
         return false;
     }
-    return ret;
+    return true;
 }
 

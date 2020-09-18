@@ -49,7 +49,7 @@ bool HaoFaceDetector::load(const string& modelDir) {
     }
 
     // Set the number of threads available to the interpreter.
-//    mInterpreter->SetNumThreads(4);
+    // mInterpreter->SetNumThreads(4);
     return true;
 }
 

@@ -22,11 +22,9 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.lang.annotation.Native;
-import java.util.concurrent.ConcurrentLinkedQueue;
 
 public class MainActivity extends Activity {
-    private final String TAG = "MainActivity";
+    private final String TAG = "face MainActivity";
     private ImageProcessor mImageProcessor = new ImageProcessor();
     private VideoCapture mVideoCapture = new VideoCapture(MainActivity.this);
     private Surface mPreviewSurface;
@@ -156,7 +154,6 @@ public class MainActivity extends Activity {
             nativeBuffer.draw(mPreviewSurface);
         }
         Log.i(TAG, "NativeBuffer.draw: " + (System.currentTimeMillis() - t4) + "ms");
-        Log.i(TAG, "processFrame: " + (System.currentTimeMillis() - t1) + "ms");
     }
 
     private  boolean requestPermissions() {
@@ -208,7 +205,10 @@ public class MainActivity extends Activity {
     public static boolean copyFiles(Context context) {
         String[] assetFiles = new String[] {
                 "kazemi_face_landmark.dat",
-                "resnet_face_descriptor.dat"
+                "smoking_classifier.prototxt",
+                "smoking_classifier.caffemodel",
+                "calling_classifier.prototxt",
+                "calling_classifier.caffemodel",
         };
         boolean result = true;
         for(String file: assetFiles) {
@@ -218,5 +218,4 @@ public class MainActivity extends Activity {
         }
         return result;
     }
-
 }

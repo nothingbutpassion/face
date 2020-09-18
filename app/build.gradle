@@ -20,8 +20,7 @@ android {
             cmake {
                 cppFlags "-std=c++11 -O3"
                 //cppFlags "-std=c++11 -frtti -fexceptions"
-                //arguments "-DANDROID_STL=c++_shared"
-                arguments "-DANDROID_ARM_NEON=TRUE"
+                arguments "-DANDROID_STL=c++_shared", "-DANDROID_ARM_NEON=TRUE"
             }
         }
         ndk {
@@ -41,14 +40,14 @@ android {
             path "CMakeLists.txt"
         }
     }
-    sourceSets {
-        main {
-            // NOTES:
-            // Specify OpenCV libs dir where all .so files packaged to this apk
-            jniLibs.srcDirs 'libs'
-            // jniLibs.srcDirs 'libs/opencv/libs', 'E:/qiujing/code/DmsDemoService/thirdparty/dlib/libs', 'E:/qiujing/code/DmsDemoService/thirdparty/openblas/libs'
-        }
-    }
+//    sourceSets {
+//        main {
+//            // NOTES:
+//            // Specify OpenCV libs dir where all .so files packaged to this apk
+//            // jniLibs.srcDirs 'path/to/libs1', ''path/to/libs2', 'path/to/libs3'
+//            jniLibs.srcDirs 'libs'
+//        }
+//    }
     lintOptions {
         abortOnError false
     }
