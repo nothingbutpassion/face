@@ -139,7 +139,7 @@ void ImageProcessor::process(Mat& image) {
             color = smoking;
         else if (left_calling_results[0] > 0.9 || right_calling_results[0] > 0.9)
             color = calling;
-        string label = format("[%.2f, %.2f] [%.2f, %.2f]",
+        string label = format("Smoke: %.2f, %.2f Call: %.2f, %.2f",
                 smoking_results[0], smoking_results[1], left_calling_results[0], right_calling_results[0]);
         drawBoxes(image, box.x, box.y, box.x + box.width, box.y + box.height, label, color);
 
