@@ -53,11 +53,11 @@ set(DLIB_ROOT "Z:/dlib-19.19")
 # NOTES:
 # tensorflow lite head files research dirs include <tensorflow-source-root-dir> and <flatb-include-dir>
 set(TFLITE_INC_DIR
-        "Z:/tensorflow"
-        "Z:/.cache/bazel/_bazel_yuhao/e2565a7e6afe4afd7195ad0efe2016e4/external/com_google_absl"
-        "Z:/.cache/bazel/_bazel_yuhao/e2565a7e6afe4afd7195ad0efe2016e4/external/flatbuffers/include"
+        "Y:/softwares/tensorflow"
+        "Y:/.cache/bazel/_bazel_algo/0066166b40af9d952bd402a4b4b3126d/external/com_google_absl"
+        "Y:/.cache/bazel/_bazel_algo/0066166b40af9d952bd402a4b4b3126d/external/flatbuffers/include"
         )
-set(TFLITE_LIB "Z:/tensorflow/bazel-out/arm64-v8a-opt/bin/tensorflow/lite/libtensorflowlite.so" )
+set(TFLITE_LIB "Y:/softwares/tensorflow/bazel-out/arm64-v8a-opt/bin/tensorflow/lite/libtensorflowlite.so" )
 add_library(tensorflowlite SHARED IMPORTED )
 set_target_properties(tensorflowlite PROPERTIES IMPORTED_LOCATION ${TFLITE_LIB})
 
@@ -70,12 +70,9 @@ add_library(face SHARED
         src/main/cpp/image_processor_jni.cpp
         src/main/cpp/image_processor.cpp
         src/main/cpp/hog_face_detector.cpp
-        src/main/cpp/ssd_face_detector.cpp
         src/main/cpp/tflite_action_classifier.cpp
-        src/main/cpp/caffe_action_classifier.cpp
         src/main/cpp/caffe_smoking_classifier.cpp
         src/main/cpp/caffe_calling_classifier.cpp
-        src/main/cpp/hao_face_detector.cpp
         src/main/cpp/resnet_face_descriptor.cpp
         src/main/cpp/kazemi_face_landmark.cpp
         src/main/cpp/simple_pose_estimator.cpp
