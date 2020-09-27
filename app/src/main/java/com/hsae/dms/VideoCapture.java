@@ -26,7 +26,7 @@ import java.util.List;
 
 
 public class VideoCapture {
-    private static final String TAG = "face VideoCapture";
+    private static final String TAG = "face";
 
     private final Context mContext;
 

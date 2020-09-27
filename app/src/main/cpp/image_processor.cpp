@@ -117,12 +117,10 @@ void ImageProcessor::process(Mat& image) {
 
         vector<float> left_calling_results;
         vector<float> right_calling_results;
-        Mat calling_image = mCallingClassifier.getInput(gray, landmarks);
-        Mat left_calling_image = calling_image(Rect(0, 0, 64, 64));
-        Mat right_calling_image;
-        flip(calling_image(Rect(64, 0, 64, 64)), right_calling_image, 1);
-        mCallingClassifier.predict(left_calling_image, left_calling_results);
-        mCallingClassifier.predict(right_calling_image, right_calling_results);
+        Mat left_calling_input = mCallingClassifier.getInput(gray, landmarks, true);
+        Mat right_calling_input = mCallingClassifier.getInput(gray, landmarks, false);
+        mCallingClassifier.predict(left_calling_input, left_calling_results);
+        mCallingClassifier.predict(right_calling_input, right_calling_results);
 
         // Pose estimation
         Point3f pose;

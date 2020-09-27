@@ -24,7 +24,7 @@ import java.io.IOException;
 import java.io.InputStream;
 
 public class MainActivity extends Activity {
-    private final String TAG = "face MainActivity";
+    private final String TAG = "face";
     private ImageProcessor mImageProcessor = new ImageProcessor();
     private VideoCapture mVideoCapture = new VideoCapture(MainActivity.this);
     private Surface mPreviewSurface;
@@ -204,11 +204,9 @@ public class MainActivity extends Activity {
 
     public static boolean copyFiles(Context context) {
         String[] assetFiles = new String[] {
-                "kazemi_face_landmark.dat",
-                "smoking_classifier.prototxt",
-                "smoking_classifier.caffemodel",
-                "calling_classifier.prototxt",
-                "calling_classifier.caffemodel",
+            "kazemi_face_landmark.dat",
+            "smoking_classifier.tflite",
+            "calling_classifier.tflite",
         };
         boolean result = true;
         for(String file: assetFiles) {
