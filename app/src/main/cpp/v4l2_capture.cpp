@@ -7,14 +7,12 @@
 #include <sys/stat.h>
 #include <sys/ioctl.h>
 #include <linux/videodev2.h>
-
 #include <cstdio>
 #include <cstring>
 #include <cstdlib>
 #include <cassert>
 
 #include "v4l2_capture.h"
-
 
 static inline const char* str(unsigned long ioctlCode) {
     switch (ioctlCode) {
@@ -131,10 +129,10 @@ bool V4L2Capture::read(void** raw, uint32_t* length) {
     if (raw)
         *raw = buffers[bufferIndex].start;
     if (length)
-        *length = buffers[bufferIndex].buffer.bytesused;
+        *length = buffers[bufferIndex].length;
     LOGD("got frame: timestamp=%lu, buf=%p, len=%u, width=%u, height=%u, format=%c%c%c%c\n",
          (1000*buffers[bufferIndex].buffer.timestamp.tv_sec + buffers[bufferIndex].buffer.timestamp.tv_usec/1000),
-         buffers[bufferIndex].start, buffers[bufferIndex].buffer.bytesused, width, height,
+         buffers[bufferIndex].start, buffers[bufferIndex].length, width, height,
          pixelformat&0xff, (pixelformat>>8)&0xff, (pixelformat>>16)&0xff, (pixelformat>>24)&0xff);
     return true;
 }
@@ -289,18 +287,12 @@ double V4L2Capture::get(int property) {
 }
 
 bool V4L2Capture::init_capture() {
-    if (!try_capability())
-        return false;
-    if (!try_emum_inputs())
-        return false;
-    if (!try_set_input())
-        return false;
-    if (!try_enum_formats())
-        return false;
-    if (!try_set_format())
-        return false;
-    if (!try_set_fps())
-        return false;
+    try_capability();
+    try_emum_inputs();
+    try_enum_formats();
+    try_set_input();
+    try_set_format();
+    try_set_fps();
     if (!try_request_buffers(requestBufferSize))
         return false;
     if (!try_create_buffers()) {
@@ -324,7 +316,7 @@ bool V4L2Capture::reset_capture() {
 }
 
 bool V4L2Capture::try_capability() {
-    v4l2_capability capability = v4l2_capability();
+    v4l2_capability capability = {};
     if (!try_ioctl(VIDIOC_QUERYCAP, &capability)) {
         LOGE("unable to query capability.\n");
         return false;
@@ -340,9 +332,9 @@ bool V4L2Capture::try_ioctl(unsigned long ioctlCode, void* parameter) const {
     while (-1 == ioctl(deviceHandle, ioctlCode, parameter)) {
         if (!(errno == EBUSY || errno == EAGAIN)) {
             if (errno == EINVAL &&  (ioctlCode == VIDIOC_ENUM_FMT || ioctlCode == VIDIOC_ENUM_FRAMESIZES || ioctlCode == VIDIOC_ENUMINPUT))
-                LOGD("ioctl: %s  failed, %s\n", str(ioctlCode), "invalid index");
+                LOGD("ioctl %s failed, %s\n", str(ioctlCode), "invalid index");
             else
-                LOGE("ioctl: %s  failed\n", str(ioctlCode));
+                LOGE("ioctl %s failed\n", str(ioctlCode));
             return false;
         }
         // Poll device
@@ -369,9 +361,9 @@ bool V4L2Capture::try_ioctl(unsigned long ioctlCode, void* parameter) const {
 
 bool V4L2Capture::try_enum_formats() {
     bool status = false;
-    v4l2_fmtdesc fmtdesc = v4l2_fmtdesc();
+    v4l2_fmtdesc fmtdesc = {};
     fmtdesc.index = 0;
-    fmtdesc.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
+    fmtdesc.type = V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE;
     while (try_ioctl(VIDIOC_ENUM_FMT, &fmtdesc) && fmtdesc.index < 256) {
         status = true;
         LOGI("pixelformat: %c%c%c%c, description: %s\n",
@@ -381,7 +373,7 @@ bool V4L2Capture::try_enum_formats() {
                 (fmtdesc.pixelformat >> 24) & 0xff,
                 fmtdesc.description);
         // get all available frame size of specified pixel format
-        v4l2_frmsizeenum frmsize = v4l2_frmsizeenum();
+        v4l2_frmsizeenum frmsize = {};
         frmsize.index = 0;
         frmsize.pixel_format = fmtdesc.pixelformat;
         while (try_ioctl(VIDIOC_ENUM_FRAMESIZES, &frmsize) && frmsize.index < 256) {
@@ -409,7 +401,7 @@ bool V4L2Capture::try_enum_formats() {
 
 bool V4L2Capture::try_emum_inputs() {
     bool status = false;
-    v4l2_input input = v4l2_input();
+    v4l2_input input = {};
     input.index = 0;
     while (try_ioctl(VIDIOC_ENUMINPUT, &input) && input.index < 256) {
         status = true;
@@ -420,7 +412,7 @@ bool V4L2Capture::try_emum_inputs() {
 }
 
 bool V4L2Capture::try_set_input() {
-    v4l2_input input = v4l2_input();
+    v4l2_input input = {};
     input.index = inputChannel;
     try_ioctl(VIDIOC_S_INPUT, &input);
     return try_ioctl(VIDIOC_G_INPUT, &inputChannel);
@@ -440,8 +432,8 @@ bool V4L2Capture::try_set_format() {
     for (size_t i = 0; i < sizeof(try_order) / sizeof(__u32); i++) {
         if (0 == try_order[i])
             continue;
-        v4l2_format format = v4l2_format();
-        format.type                = V4L2_BUF_TYPE_VIDEO_CAPTURE;
+        v4l2_format format = {};
+        format.type                = V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE;
         format.fmt.pix.pixelformat = try_order[i];
         format.fmt.pix.field       = V4L2_FIELD_ANY;
         format.fmt.pix.width       = width;
@@ -456,8 +448,8 @@ bool V4L2Capture::try_set_format() {
         }
     }
     LOGW("no proper formats, use default format\n");
-    v4l2_format format = v4l2_format();
-    format.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
+    v4l2_format format = {};
+    format.type = V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE;
     if (try_ioctl(VIDIOC_G_FMT, &format)) {
         width = format.fmt.pix.width;
         height = format.fmt.pix.height;
@@ -470,8 +462,8 @@ bool V4L2Capture::try_set_format() {
 }
 
 bool V4L2Capture::try_set_fps() {
-    v4l2_streamparm streamparm = v4l2_streamparm();
-    streamparm.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
+    v4l2_streamparm streamparm = {};
+    streamparm.type = V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE;
     streamparm.parm.capture.timeperframe.numerator = 1;
     streamparm.parm.capture.timeperframe.denominator = fps;
     if (!try_ioctl(VIDIOC_S_PARM, &streamparm) || !try_ioctl(VIDIOC_G_PARM, &streamparm))
@@ -482,7 +474,7 @@ bool V4L2Capture::try_set_fps() {
 }
 
 bool V4L2Capture::try_set_streaming(bool on) {
-    int type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
+    int type = V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE;
     if (!try_ioctl(on ? VIDIOC_STREAMON : VIDIOC_STREAMOFF, &type))
         return false;
     LOGI("streaming: %s\n", on ? "on":"off");
@@ -493,9 +485,9 @@ bool V4L2Capture::try_request_buffers(uint32_t nums) {
     bufferSize = nums;
     // Release the buffers already allocated
     if (0 == bufferSize) {
-        v4l2_requestbuffers req = v4l2_requestbuffers();
+        v4l2_requestbuffers req = {};
         req.count = bufferSize;
-        req.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
+        req.type = V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE;
         req.memory = V4L2_MEMORY_MMAP;
         if (!try_ioctl(VIDIOC_REQBUFS, &req)) {
             if (EINVAL == errno) {
@@ -509,9 +501,9 @@ bool V4L2Capture::try_request_buffers(uint32_t nums) {
     }
     // Request allocating buffers
     while (bufferSize > 0) {
-        v4l2_requestbuffers req = v4l2_requestbuffers();
+        v4l2_requestbuffers req = {};
         req.count = bufferSize;
-        req.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
+        req.type = V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE;
         req.memory = V4L2_MEMORY_MMAP;
         if (!try_ioctl(VIDIOC_REQBUFS, &req)) {
             if (EINVAL == errno) {
@@ -536,26 +528,31 @@ bool V4L2Capture::try_request_buffers(uint32_t nums) {
 
 bool V4L2Capture::try_create_buffers() {
     for (uint32_t i=0; i < bufferSize; ++i) {
-        v4l2_buffer buf = v4l2_buffer();
-        buf.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
+        v4l2_plane plane = {};
+        memset(&plane, 0, sizeof(v4l2_plane));
+        plane.length = VIDEO_MAX_PLANES;
+        v4l2_buffer buf = {};
+        buf.type = V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE;
         buf.memory = V4L2_MEMORY_MMAP;
+        buf.length = VIDEO_MAX_PLANES;
         buf.index = i;
+        buf.m.planes = &plane;
         if (!try_ioctl(VIDIOC_QUERYBUF, &buf)) {
             return false;
         }
-        buffers[i].start =
-                ::mmap(NULL,        // start anywhere
-                     buf.length,
+        buffers[i].start = ::mmap(NULL,
+                     buf.m.planes[0].length,
                      PROT_READ,  // required
                      MAP_SHARED, // recommended
-                     deviceHandle, buf.m.offset);
+                     deviceHandle,
+                     buf.m.planes[0].m.mem_offset);
         if (MAP_FAILED == buffers[i].start) {
             LOGE("mmap failed: %s\n", strerror(errno));
             return false;
         }
-        buffers[i].length = buf.length;
+        buffers[i].length = buf.m.planes[0].length;
         buffers[i].buffer = buf;
-        LOGD("buffer: index=%u, offset=%u, length=%u\n", buf.index, buf.m.offset, buf.length);
+        LOGD("buffer: index=%u, offset=%u, length=%u\n", buf.index, buf.m.planes[0].m.mem_offset, buf.m.planes[0].length);
     }
     return true;
 }
@@ -581,9 +578,12 @@ bool V4L2Capture::try_queue_buffer(uint32_t index) {
 }
 
 bool V4L2Capture::try_dequeue_buffer() {
-    v4l2_buffer buf = v4l2_buffer();
-    buf.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
+    v4l2_plane plane = {};
+    v4l2_buffer buf = {};
+    buf.type = V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE;
     buf.memory = V4L2_MEMORY_MMAP;
+    buf.m.planes = &plane;
+    buf.length = 1;
     if (!try_ioctl(VIDIOC_DQBUF, &buf))
         return false;
 

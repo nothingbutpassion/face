@@ -7,10 +7,10 @@
 #define DEBUG_V4L2_CAPTURE
 #ifdef  DEBUG_V4L2_CAPTURE
 #include <cstdio>
-#define LOGD(...)
-#define LOGI(...)   ((void)fprintf(stdout, __VA_ARGS__))
-#define LOGW(...)   ((void)fprintf(stderr, __VA_ARGS__))
-#define LOGE(...)   ((void)fprintf(stderr, __VA_ARGS__))
+#define LOGD(...)   printf(__VA_ARGS__)
+#define LOGI(...)   printf(__VA_ARGS__)
+#define LOGW(...)   printf(__VA_ARGS__)
+#define LOGE(...)   printf(__VA_ARGS__)
 #else
 #define LOGD(...)
 #define LOGI(...)
@@ -28,9 +28,11 @@
 constexpr uint32_t MAX_CAMERAS      = 16;
 constexpr uint32_t MAX_BUFFERS      = 8;
 constexpr uint32_t DEFAULT_BUFFERS  = 4;
-constexpr uint32_t DEFAULT_WIDTH    = 640;
-constexpr uint32_t DEFAULT_HEIGHT   = 480;
+constexpr uint32_t DEFAULT_WIDTH    = 1280;
+constexpr uint32_t DEFAULT_HEIGHT   = 720;
 constexpr uint32_t DEFAULT_FPS      = 30;
+constexpr uint32_t DEFAULT_FORMAT   = V4L2_PIX_FMT_YUYV;
+constexpr uint32_t DEFAULT_CHANNEL  = 0;
 
 class V4L2Capture {
 public:
@@ -74,8 +76,8 @@ private:
 private:
     bool opened = false;
     int deviceHandle = -1;
-    uint32_t inputChannel = 0;
-    uint32_t pixelformat = 0;
+    uint32_t inputChannel = DEFAULT_CHANNEL;
+    uint32_t pixelformat = DEFAULT_FORMAT;
     uint32_t width  = DEFAULT_WIDTH;
     uint32_t height = DEFAULT_HEIGHT;
     uint32_t fps = DEFAULT_FPS;

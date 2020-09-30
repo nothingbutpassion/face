@@ -6,10 +6,7 @@
 
 using namespace std;
 
-// -d /dev/video0 -s 1280x640 -f RGBA -r 15 -o output -c 100
-// -h
-
-void showUsage(const char* app) {
+static void showUsage(const char* app) {
     LOGE("Usage: %s [-d <device-name>]  [-s <video-size>] [-f <pixel-format>] [-r <fps>] [-b <buffers>] [-i <input-channel>] [-o <out-file>] [-c <out-frames>] \n"
          "Example: %s -d /dev/video0 -s 640x480 -f RGB3 -r 30  -b 2 -i 0 -o cap.rgb -c 11\n", app, app);
 }
@@ -126,20 +123,20 @@ int main(int argc, char* argv[])
              width, height, bufferSize, fps);
     }
     if (outFile) {
-        int outFrames = argc > 2 ? atoi(argv[2]) : 111;
+        int nFrames = outFrames ? atoi(outFrames) : 11;
         FILE* fp = fopen(outFile, "wb");
         if (!fp) {
             LOGE("can't open %s\n", outFile);
             return -1;
         }
-        for (int i=0; i < outFrames; ++i) {
+        for (int i=0; i < nFrames; ++i) {
             void* frame = nullptr;
             uint32_t lenght = 0;
             if (!capture.read(&frame, &lenght)) {
                 LOGE("read video frame error\n");
                 break;
             }
-            LOGI("captured video frame %d\n", i);
+            LOGI("captured video frame %d (%d bytes)\n", i, lenght);
             fwrite(frame, 1, lenght, fp);
         }
         fclose(fp);

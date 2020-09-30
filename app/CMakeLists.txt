@@ -141,3 +141,10 @@ target_link_libraries(test_tflite
         )
 set_target_properties(test_tflite PROPERTIES RUNTIME_OUTPUT_DIRECTORY
         "${CMAKE_CURRENT_SOURCE_DIR}/build/outputs/bin/${CMAKE_BUILD_TYPE}")
+
+add_executable(test_v4l2
+        src/main/cpp/test_v4l2_capture.cpp
+        src/main/cpp/v4l2_capture.cpp
+        )
+set_target_properties(test_v4l2 PROPERTIES RUNTIME_OUTPUT_DIRECTORY
+        "${CMAKE_CURRENT_SOURCE_DIR}/build/outputs/bin/${CMAKE_BUILD_TYPE}")
