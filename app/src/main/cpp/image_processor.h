@@ -7,8 +7,8 @@
 #include "hog_face_detector.h"
 #include "kazemi_face_landmark.h"
 #include "simple_pose_estimator.h"
-#include "caffe_smoking_classifier.h"
-#include "caffe_calling_classifier.h"
+#include "tflite_smoking_classifier.h"
+#include "tflite_calling_classifier.h"
 
 class ImageProcessor {
 public:
@@ -21,8 +21,8 @@ private:
     HOGFaceDetector mFaceDetector;
     KazemiFaceLandmark mFaceLandmark;
     SimplePoseEstimator mPoseEstimator;
-    CaffeSmokingClassifier mSmokingClassifier;
-    CaffeCallingClassifier mCallingClassifier;
+    TfLiteSmokingClassifier mSmokingClassifier;
+    TfLiteCallingClassifier mCallingClassifier;
 };
 
 

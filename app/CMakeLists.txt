@@ -31,35 +31,28 @@ cmake_minimum_required(VERSION 3.4.1)
 #../
 
 # NOTES:
-# Set OPENCV_INC_DIR/OPENCV_LIB_DIR as OpenCV include/libs directory
+# Set OPENCV_INC_DIR/OPENCV_LIB as OpenCV include directory/lib path
 # ${ANDROID_ABI} is set by gradle. see */cmake/<debug or release>/<abi>/cmake_build_command.txt
-#set(OPENCV_INC_DIR "Z:/opencv/build_for_android_arm64-v8a/install/sdk/native/jni/include")
-#set(OPENCV_LIB_DIR "Z:/opencv/build_for_android_arm64-v8a/install/sdk/native/libs/${ANDROID_ABI}")
-#set(OPENCV_LIBS opencv_core opencv_imgproc opencv_imgcodecs opencv_dnn opencv_calib3d opencv_features2d opencv_flann)
 set(OPENCV_INC_DIR "D:/share/opencv-4.3.0-android-sdk/sdk/native/jni/include")
-set(OPENCV_LIB_DIR "D:/share/opencv-4.3.0-android-sdk/sdk/native/libs/${ANDROID_ABI}")
-set(OPENCV_LIBS opencv_java4)
-
-foreach(name in ${OPENCV_LIBS})
-    add_library(${name} SHARED IMPORTED )
-    set_target_properties(${name} PROPERTIES
-            IMPORTED_LOCATION ${OPENCV_LIB_DIR}/lib${name}.so)
-endforeach()
+set(OPENCV_LIB "D:/share/opencv-4.3.0-android-sdk/sdk/native/libs/${ANDROID_ABI}/libopencv_java4.so")
+add_library(opencv SHARED IMPORTED )
+set_target_properties(opencv PROPERTIES IMPORTED_LOCATION ${OPENCV_LIB})
 
 # NOTES:
 # We directly use dlib source, so set the dlib root dir for finding
-set(DLIB_ROOT "Z:/dlib-19.19")
+set(DLIB_ROOT "D:/share/dlib-19.17")
 
 # NOTES:
-# tensorflow lite head files research dirs include <tensorflow-source-root-dir> and <flatb-include-dir>
-set(TFLITE_INC_DIR
-        "Z:/tensorflow"
-        "Z:/.cache/bazel/_bazel_yuhao/e2565a7e6afe4afd7195ad0efe2016e4/external/com_google_absl"
-        "Z:/.cache/bazel/_bazel_yuhao/e2565a7e6afe4afd7195ad0efe2016e4/external/flatbuffers/include"
-        )
-set(TFLITE_LIB "Z:/tensorflow/bazel-out/arm64-v8a-opt/bin/tensorflow/lite/libtensorflowlite.so" )
+# For tensorflow lite
+set(TFLITE_INC_DIR  "D:/share/tensorflow-lite-2.3.0/headers")
+set(TFLITE_LIB "D:/share/tensorflow-lite-2.3.0/jni/${ANDROID_ABI}/libtensorflowlite_jni.so")
 add_library(tensorflowlite SHARED IMPORTED )
 set_target_properties(tensorflowlite PROPERTIES IMPORTED_LOCATION ${TFLITE_LIB})
+# For tensoflow lite gpu delegate
+set(TFLITE_GPU_INC_DIR  "D:/share/tensorflow-lite-gpu-2.3.0/headers")
+set(TFLITE_GPU_LIB "D:/share/tensorflow-lite-gpu-2.3.0/jni/${ANDROID_ABI}/libtensorflowlite_gpu_jni.so")
+add_library(tensorflowlite_gpu SHARED IMPORTED )
+set_target_properties(tensorflowlite_gpu PROPERTIES IMPORTED_LOCATION ${TFLITE_GPU_LIB})
 
 # Creates and names a library, sets it as either STATIC
 # or SHARED, and provides the relative paths to its source code.
@@ -70,12 +63,8 @@ add_library(face SHARED
         src/main/cpp/image_processor_jni.cpp
         src/main/cpp/image_processor.cpp
         src/main/cpp/hog_face_detector.cpp
-        src/main/cpp/ssd_face_detector.cpp
-        src/main/cpp/tflite_action_classifier.cpp
-        src/main/cpp/caffe_action_classifier.cpp
-        src/main/cpp/caffe_smoking_classifier.cpp
-        src/main/cpp/caffe_calling_classifier.cpp
-        src/main/cpp/hao_face_detector.cpp
+        src/main/cpp/tflite_calling_classifier.cpp
+        src/main/cpp/tflite_smoking_classifier.cpp
         src/main/cpp/resnet_face_descriptor.cpp
         src/main/cpp/kazemi_face_landmark.cpp
         src/main/cpp/simple_pose_estimator.cpp
@@ -97,6 +86,7 @@ target_include_directories(face PRIVATE
         ${OPENCV_INC_DIR}
         ${DLIB_ROOT}                          # for dlib includes
         ${TFLITE_INC_DIR}                     # for tensorflow lite
+        ${TFLITE_GPU_INC_DIR}                 # for tensorflow lite gpu delegate
         )
 
 target_compile_definitions(face PRIVATE
@@ -110,8 +100,9 @@ target_compile_definitions(face PRIVATE
 target_link_libraries(face
         android
         log
-        ${OPENCV_LIBS}
+        opencv
         tensorflowlite
+        tensorflowlite_gpu
         )
 
 add_custom_command(
@@ -120,16 +111,33 @@ add_custom_command(
                 ${CMAKE_CURRENT_SOURCE_DIR}/models/kazemi_face_landmark.dat
                 ${CMAKE_CURRENT_SOURCE_DIR}/src/main/assets/kazemi_face_landmark.dat
         COMMAND ${CMAKE_COMMAND} -E copy
-                ${CMAKE_CURRENT_SOURCE_DIR}/models/smoking_classifier.prototxt
-                ${CMAKE_CURRENT_SOURCE_DIR}/src/main/assets/smoking_classifier.prototxt
+                ${CMAKE_CURRENT_SOURCE_DIR}/models/smoking_classifier.tflite
+                ${CMAKE_CURRENT_SOURCE_DIR}/src/main/assets/smoking_classifier.tflite
         COMMAND ${CMAKE_COMMAND} -E copy
-                ${CMAKE_CURRENT_SOURCE_DIR}/models/smoking_classifier.caffemodel
-                ${CMAKE_CURRENT_SOURCE_DIR}/src/main/assets/smoking_classifier.caffemodel
-
-        COMMAND ${CMAKE_COMMAND} -E copy
-                ${CMAKE_CURRENT_SOURCE_DIR}/models/calling_classifier.prototxt
-                ${CMAKE_CURRENT_SOURCE_DIR}/src/main/assets/calling_classifier.prototxt
-        COMMAND ${CMAKE_COMMAND} -E copy
-                ${CMAKE_CURRENT_SOURCE_DIR}/models/calling_classifier.caffemodel
-                ${CMAKE_CURRENT_SOURCE_DIR}/src/main/assets/calling_classifier.caffemodel
+                ${CMAKE_CURRENT_SOURCE_DIR}/models/calling_classifier.tflite
+                ${CMAKE_CURRENT_SOURCE_DIR}/src/main/assets/calling_classifier.tflite
         )
+
+
+add_executable(test_tflite
+        src/main/cpp/test_tflite_inference.cpp
+        src/main/cpp/tflite_wrapper.cpp
+        )
+target_include_directories(test_tflite PRIVATE
+        ${OPENCV_INC_DIR}
+        ${TFLITE_INC_DIR}
+        ${TFLITE_GPU_INC_DIR}
+        )
+target_link_libraries(test_tflite
+        log
+        z
+        mediandk
+        jnigraphics
+        EGL
+        GLESv3
+        opencv
+        tensorflowlite
+        tensorflowlite_gpu
+        )
+set_target_properties(test_tflite PROPERTIES RUNTIME_OUTPUT_DIRECTORY
+        "${CMAKE_CURRENT_SOURCE_DIR}/build/outputs/bin/${CMAKE_BUILD_TYPE}")
