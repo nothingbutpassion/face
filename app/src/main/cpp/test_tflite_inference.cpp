@@ -5,6 +5,7 @@
 #include <cstdio>
 #include <string>
 #include <vector>
+#include <opencv2/core.hpp>
 #include <opencv2/imgcodecs.hpp>
 #include <opencv2/imgproc.hpp>
 #include "tflite_wrapper.h"
@@ -34,7 +35,6 @@ namespace {
         dirent* ent = nullptr;
         while ((ent = readdir(dir)) != nullptr) {
             if (ent->d_name != string(".") && ent->d_name != string("..")) {
-                LOGI("input: %s", ent->d_name);
                 files.push_back(ent->d_name);
             }
         }
@@ -142,9 +142,10 @@ int main(int argc, char* argv[])
         return -1;
     }
 
+    vector<string> files;
     vector<Mat> imgs;
     if (dataDir) {
-        vector<string> files = listFiles(dataDir);
+        files = listFiles(dataDir);
         if (files.size() == 0) {
             LOGE("no files found in %s", dataDir);
             return -1;
@@ -177,15 +178,21 @@ int main(int argc, char* argv[])
             LOGE("only support one input tensor with one channel");
             return -1;
         }
-        for (auto img: imgs) {
+        for (int i=0; i < imgs.size(); ++i) {
+            Mat img = imgs[i];
             Mat input;
             resize(img, img, size);
-            img.convertTo(input, CV_32F);
+            Scalar mean;
+            Scalar stddev;
+            meanStdDev(img, mean, stddev);
+            stddev[0] += 1e-7;
+            img.convertTo(input, CV_32F, 1./stddev[0], -mean[0]/stddev[0]);
             tflite.setInput(0, input.data, tflite.inputBytes(0));
             int64_t t = getTickCount();
             tflite.forward();
             double d = double(getTickCount()-t)/getTickFrequency();
             duration += d;
+            LOGI("input:  %s", files[i].c_str());
             dumpOutput(tflite, "output: ");
         }
     } else {
