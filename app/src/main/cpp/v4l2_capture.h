@@ -52,6 +52,7 @@ public:
     bool isOpened();
     bool open(int index=-1);
     bool open(const char* deviceName);
+    void close();
     bool read(void** raw, uint32_t* length);
     bool set(int property, double value);
     double get(int property);

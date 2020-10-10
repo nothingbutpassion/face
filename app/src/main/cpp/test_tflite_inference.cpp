@@ -174,8 +174,9 @@ int main(int argc, char* argv[])
     if (imgs.size() > 0) {
         repeatedTimes = imgs.size();
         Size size(tflite.inputWidth(0), tflite.inputHeight(0));
-        if (tflite.inputCount() != 1 || tflite.inputBytes(0) != size.width*size.height*sizeof(float)) {
-            LOGE("only support one input tensor with one channel");
+        if (tflite.inputCount() != 1 || tflite.inputDims(0) != 4 ||
+            tflite.inputBytes(0) != size.width*size.height*sizeof(float)) {
+            LOGE("only support one input tensor with shape (1, H, W, 1)");
             return -1;
         }
         for (int i=0; i < imgs.size(); ++i) {

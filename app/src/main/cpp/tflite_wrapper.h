@@ -25,11 +25,11 @@ public:
     void forward();
     void setRandomInput();
     int inputCount();
+    int inputDims(int index);
     int inputBytes(int index);
     int inputWidth(int index);
     int inputHeight(int index);
     void setInput(int index, const void* data, int size);
-    int outputCount();
     int outputBytes(int index);
     void getOutput(int index, void* data, int size);
 

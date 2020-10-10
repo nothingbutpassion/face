@@ -67,6 +67,7 @@ V4L2Capture::~V4L2Capture() {
         try_release_buffers();
         ::close(deviceHandle);
         deviceHandle = -1;
+        opened = false;
     }
 }
 bool V4L2Capture::isOpened() {
@@ -107,6 +108,16 @@ bool V4L2Capture::open(const char* deviceName) {
     }
     LOGI("%s is opened\n", deviceName);
     return opened;
+}
+
+void V4L2Capture::close() {
+    if (deviceHandle != -1) {
+        try_set_streaming(false);
+        try_release_buffers();
+        ::close(deviceHandle);
+        deviceHandle = -1;
+        opened = false;
+    }
 }
 
 bool V4L2Capture::read(void** raw, uint32_t* length) {

@@ -84,25 +84,15 @@ bool TfLiteWrapper::load(const char* modelFile, int numThreads, bool useNNAPI, b
         return false;
     }
 
-    bool supported = true;
     int input_count = TfLiteInterpreterGetInputTensorCount(mInterpreter);
     for (int i=0; i < input_count; ++i) {
         TfLiteTensor* tensor = TfLiteInterpreterGetInputTensor(mInterpreter, i);
         dumpTensor(tensor, "input:  ");
-        if (tensor->type != kTfLiteFloat32 || tensor->dims->size != 4)
-            supported = false;
     }
     int output_count = TfLiteInterpreterGetInputTensorCount(mInterpreter);
     for (int i=0; i < output_count; ++i) {
         const TfLiteTensor* tensor = TfLiteInterpreterGetOutputTensor(mInterpreter, i);
         dumpTensor(TfLiteInterpreterGetOutputTensor(mInterpreter, i), "output: ");
-        if (tensor->type != kTfLiteFloat32)
-            supported = false;
-    }
-    if (!supported) {
-        LOGE("only float input/output tensors and each input tensor dims must be 4");
-        release();
-        return false;
     }
     return true;
 }
@@ -135,14 +125,22 @@ void TfLiteWrapper::setRandomInput() {
     int input_count = TfLiteInterpreterGetInputTensorCount(mInterpreter);
     for (int i=0; i < input_count; ++i) {
         TfLiteTensor* tensor = TfLiteInterpreterGetInputTensor(mInterpreter, i);
-        for (int k=0; k < tensor->bytes/sizeof(float); ++k)
-            tensor->data.f[k] = 2.f*float(rand())/RAND_MAX - 1.f;
+        if (tensor->type == kTfLiteFloat32) {
+            for (int k=0; k < tensor->bytes/sizeof(float); ++k)
+                tensor->data.f[k] = 2.f*float(rand())/RAND_MAX - 1.f;
+        } else {
+            for (int k=0; k < tensor->bytes; ++k)
+                *((unsigned char*)tensor->data.data + k) = 255*float(rand())/RAND_MAX;
+        }
     }
 }
 
-
 int TfLiteWrapper::inputCount() {
     return TfLiteInterpreterGetInputTensorCount(mInterpreter);
+}
+
+int TfLiteWrapper::inputDims(int index) {
+    return TfLiteInterpreterGetInputTensor(mInterpreter, index)->dims->size;
 }
 
 int TfLiteWrapper::inputBytes(int index) {
@@ -161,9 +159,6 @@ void TfLiteWrapper::setInput(int index, const void* data, int size) {
     TfLiteTensorCopyFromBuffer(tensor, data, size);
 }
 
-int TfLiteWrapper::outputCount() {
-    return TfLiteInterpreterGetOutputTensorCount(mInterpreter);
-}
 int TfLiteWrapper::outputBytes(int index) {
     return TfLiteInterpreterGetOutputTensor(mInterpreter, index)->bytes;
 }
