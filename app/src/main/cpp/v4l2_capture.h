@@ -7,10 +7,10 @@
 #define DEBUG_V4L2_CAPTURE
 #ifdef  DEBUG_V4L2_CAPTURE
 #include <cstdio>
-#define LOGD(...)   printf(__VA_ARGS__)
-#define LOGI(...)   printf(__VA_ARGS__)
-#define LOGW(...)   printf(__VA_ARGS__)
-#define LOGE(...)   printf(__VA_ARGS__)
+#define LOGD(fmt, ...)   printf(fmt "\n", ## __VA_ARGS__)
+#define LOGI(fmt, ...)   printf(fmt "\n", ## __VA_ARGS__)
+#define LOGW(fmt, ...)   printf(fmt "\n", ## __VA_ARGS__)
+#define LOGE(fmt, ...)   printf(fmt "\n", ## __VA_ARGS__)
 #else
 #define LOGD(...)
 #define LOGI(...)
