@@ -40,7 +40,7 @@ set_target_properties(opencv PROPERTIES IMPORTED_LOCATION ${OPENCV_LIB})
 
 # NOTES:
 # We directly use dlib source, so set the dlib root dir for finding
-set(DLIB_ROOT "D:/share/dlib-19.17")
+set(DLIB_ROOT "D:/share/dlib-19.21")
 
 # NOTES:
 # For tensorflow lite
@@ -91,7 +91,7 @@ target_include_directories(face PRIVATE
 
 target_compile_definitions(face PRIVATE
         -DDLIB_NO_GUI_SUPPORT                 #  for building dlib with no GUI support
-        -DCV__ENABLE_C_API_CTORS              #  for fixing convertion from cv::Mat to dilb::cv_image<>
+#        -DCV__ENABLE_C_API_CTORS              #  for fixing convertion from cv::Mat to dilb::cv_image<>
         )
 
 # Specifies libraries CMake should link to your target library. You
