@@ -327,15 +327,19 @@ bool V4L2Capture::reset_capture() {
 }
 
 bool V4L2Capture::try_capability() {
-    v4l2_capability capability = {};
+    v4l2_capability capability;
+    memset(&capability, sizeof(capability), 0);
     if (!try_ioctl(VIDIOC_QUERYCAP, &capability)) {
         LOGE("unable to query capability.");
         return false;
     }
-    if (!(capability.capabilities & V4L2_CAP_VIDEO_CAPTURE)) {
+    if (!(capability.capabilities & V4L2_CAP_VIDEO_CAPTURE) &&
+        !(capability.capabilities & V4L2_CAP_VIDEO_CAPTURE_MPLANE)) {
         LOGE("unable to capture video memory.");
         return false;
     }
+    LOGI("driver: %s, card: %s, bus info: %s, version: 0x%x, capabilities: 0x%x",
+            capability.driver, capability.card, capability.bus_info, capability.version, capability.capabilities);
     return true;
 }
 
@@ -372,7 +376,8 @@ bool V4L2Capture::try_ioctl(unsigned long ioctlCode, void* parameter) const {
 
 bool V4L2Capture::try_enum_formats() {
     bool status = false;
-    v4l2_fmtdesc fmtdesc = {};
+    v4l2_fmtdesc fmtdesc;
+    memset(&fmtdesc, sizeof(fmtdesc), 0);
     fmtdesc.index = 0;
     fmtdesc.type = V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE;
     while (try_ioctl(VIDIOC_ENUM_FMT, &fmtdesc) && fmtdesc.index < 256) {
@@ -387,7 +392,7 @@ bool V4L2Capture::try_enum_formats() {
         v4l2_frmsizeenum frmsize = {};
         frmsize.index = 0;
         frmsize.pixel_format = fmtdesc.pixelformat;
-        while (try_ioctl(VIDIOC_ENUM_FRAMESIZES, &frmsize) && frmsize.index < 256) {
+        while (try_ioctl(VIDIOC_ENUM_FRAMESIZES, &frmsize) && frmsize.index < 16) {
             if (frmsize.type == V4L2_FRMSIZE_TYPE_DISCRETE) {
                 LOGI("discrete: width=%u, height=%u", frmsize.discrete.width, frmsize.discrete.height);
                 // get next available frame size
@@ -412,9 +417,10 @@ bool V4L2Capture::try_enum_formats() {
 
 bool V4L2Capture::try_emum_inputs() {
     bool status = false;
-    v4l2_input input = {};
+    v4l2_input input;
+    memset(&input, sizeof(input), 0);
     input.index = 0;
-    while (try_ioctl(VIDIOC_ENUMINPUT, &input) && input.index < 256) {
+    while (try_ioctl(VIDIOC_ENUMINPUT, &input) && input.index < 16) {
         status = true;
         LOGI("input： %u", input.index);
         input.index++;
@@ -423,7 +429,8 @@ bool V4L2Capture::try_emum_inputs() {
 }
 
 bool V4L2Capture::try_set_input() {
-    v4l2_input input = {};
+    v4l2_input input;
+    memset(&input, sizeof(input), 0);
     input.index = inputChannel;
     try_ioctl(VIDIOC_S_INPUT, &input);
     return try_ioctl(VIDIOC_G_INPUT, &inputChannel);
@@ -443,7 +450,8 @@ bool V4L2Capture::try_set_format() {
     for (size_t i = 0; i < sizeof(try_order) / sizeof(__u32); i++) {
         if (0 == try_order[i])
             continue;
-        v4l2_format format = {};
+        v4l2_format format;
+        memset(&format, sizeof(format), 0);
         format.type                = V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE;
         format.fmt.pix.pixelformat = try_order[i];
         format.fmt.pix.field       = V4L2_FIELD_ANY;
@@ -459,7 +467,8 @@ bool V4L2Capture::try_set_format() {
         }
     }
     LOGW("no proper formats, use default format");
-    v4l2_format format = {};
+    v4l2_format format;
+    memset(&format, sizeof(format), 0);
     format.type = V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE;
     if (try_ioctl(VIDIOC_G_FMT, &format)) {
         width = format.fmt.pix.width;
@@ -473,7 +482,8 @@ bool V4L2Capture::try_set_format() {
 }
 
 bool V4L2Capture::try_set_fps() {
-    v4l2_streamparm streamparm = {};
+    v4l2_streamparm streamparm;
+    memset(&streamparm, sizeof(streamparm), 0);
     streamparm.type = V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE;
     streamparm.parm.capture.timeperframe.numerator = 1;
     streamparm.parm.capture.timeperframe.denominator = fps;
@@ -496,7 +506,8 @@ bool V4L2Capture::try_request_buffers(uint32_t nums) {
     bufferSize = nums;
     // Release the buffers already allocated
     if (0 == bufferSize) {
-        v4l2_requestbuffers req = {};
+        v4l2_requestbuffers req;
+        memset(&req, sizeof(req), 0);
         req.count = bufferSize;
         req.type = V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE;
         req.memory = V4L2_MEMORY_MMAP;
@@ -512,7 +523,8 @@ bool V4L2Capture::try_request_buffers(uint32_t nums) {
     }
     // Request allocating buffers
     while (bufferSize > 0) {
-        v4l2_requestbuffers req = {};
+        v4l2_requestbuffers req;
+        memset(&req, sizeof(req), 0);
         req.count = bufferSize;
         req.type = V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE;
         req.memory = V4L2_MEMORY_MMAP;
@@ -539,13 +551,19 @@ bool V4L2Capture::try_request_buffers(uint32_t nums) {
 
 bool V4L2Capture::try_create_buffers() {
     for (uint32_t i=0; i < bufferSize; ++i) {
-        v4l2_plane plane = {};
+        // NOTES:
+        // When using the multi-planar API, the m.planes field must contain a userspace pointer to an array of struct v4l2_plane
+        // and the length field has to be set to the number of elements in that array.
+        // For the single-planar API, the m.offset contains the offset of the buffer from the start of the device memory, the length field its size.
+        // For the multi-planar API, fields m.mem_offset and length in the m.planes array elements will be used instead
+        // and the length field of struct v4l2_buffer is set to the number of filled-in array elements.
+        v4l2_plane plane;
+        v4l2_buffer buf;
         memset(&plane, 0, sizeof(v4l2_plane));
-        plane.length = VIDEO_MAX_PLANES;
-        v4l2_buffer buf = {};
+        memset(&buf, sizeof(buf), 0);
         buf.type = V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE;
         buf.memory = V4L2_MEMORY_MMAP;
-        buf.length = VIDEO_MAX_PLANES;
+        buf.length = 1;
         buf.index = i;
         buf.m.planes = &plane;
         if (!try_ioctl(VIDIOC_QUERYBUF, &buf)) {
@@ -589,18 +607,18 @@ bool V4L2Capture::try_queue_buffer(uint32_t index) {
 }
 
 bool V4L2Capture::try_dequeue_buffer() {
-    v4l2_plane plane = {};
-    v4l2_buffer buf = {};
+    v4l2_plane plane;
+    v4l2_buffer buf;
+    memset(&plane, 0, sizeof(v4l2_plane));
+    memset(&buf, sizeof(buf), 0);
     buf.type = V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE;
     buf.memory = V4L2_MEMORY_MMAP;
     buf.m.planes = &plane;
     buf.length = 1;
     if (!try_ioctl(VIDIOC_DQBUF, &buf))
         return false;
-
     assert(buf.index < bufferSize);
-    assert(buffers[buf.index].length == buf.length);
-
+    assert(buffers[buf.index].length == buf.m.planes[0].length);
     // We shouldn't use this buffer in the queue while not retrieve frame from it.
     buffers[buf.index].buffer = buf;
     bufferIndex = buf.index;
