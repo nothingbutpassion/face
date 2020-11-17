@@ -133,7 +133,7 @@ Mat TfLiteCallingClassifier::getInput(const cv::Mat& gray, const vector<Point2f>
     warpAffine(gray, dst, M, size);
     Scalar mean;
     Scalar stddev;
-    meanStdDev(gray, mean, stddev);
+    meanStdDev(dst, mean, stddev);
     stddev[0] += 1e-7;
     Mat input;
     dst.convertTo(input, CV_32F, 1./stddev[0], -mean[0]/stddev[0]);
