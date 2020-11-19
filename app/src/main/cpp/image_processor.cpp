@@ -17,16 +17,29 @@ using namespace std;
 using namespace cv;
 
 static void drawBoxes(const Mat& frame, int left, int top, int right, int bottom, const string& label, const Scalar& color) {
-    rectangle(frame, Point(left, top), Point(right, bottom), color);
-    int baseLine;
-    Size textSize = getTextSize(label, FONT_HERSHEY_SIMPLEX, 0.5, 1, &baseLine);
-    int x0 = (left + right - textSize.width)/2;
-    int y0 = top;
-    rectangle(frame, Point(x0, y0), Point(x0 + textSize.width, y0-textSize.height-baseLine), color, FILLED);
-    putText(frame, label, Point(x0, y0-baseLine), FONT_HERSHEY_SIMPLEX, 0.5, Scalar());
+    const int d = 32;
+    if (d > (right - left)/2 || d > (bottom - top)/2 )
+        rectangle(frame, Point(left, top), Point(right, bottom), color);
+    else {
+        line(frame, Point(left, top), Point(left+d, top), color, 2, LINE_AA);
+        line(frame, Point(left, top), Point(left, top+d), color, 2, LINE_AA);
+        line(frame, Point(right, top), Point(right-d, top), color, 2, LINE_AA);
+        line(frame, Point(right, top), Point(right, top+d), color, 2, LINE_AA);
+        line(frame, Point(right, bottom), Point(right-d, bottom), color, 2, LINE_AA);
+        line(frame, Point(right, bottom), Point(right, bottom-d), color, 2, LINE_AA);
+        line(frame, Point(left, bottom), Point(left+d, bottom), color, 2, LINE_AA);
+        line(frame, Point(left, bottom), Point(left, bottom-d), color, 2, LINE_AA);
+    }
+    if (label.size() > 0) {
+        int baseLine;
+        Size textSize = getTextSize(label, FONT_HERSHEY_SIMPLEX, 1, 2, &baseLine);
+        int x0 = (frame.cols - textSize.width)/2;
+        int y0 = baseLine + textSize.height;
+        putText(frame, label, Point(x0, y0), FONT_HERSHEY_SIMPLEX, 1, color, 2);
+    }
 }
 
-static void drawLandmarks(Mat& image, const vector<Point2f>& landmarks) {
+static void drawLandmarks(Mat& image, const vector<Point2f>& landmarks, const Scalar& color) {
 //    vector<Scalar> colors(68);
 //    for (int i=0; i <= 16; ++i) colors[i] =  CV_RGB(255,0,0);  // 0 - 16 is profile      17 points
 //    for (int i=17; i <= 21; ++i) colors[i] = CV_RGB(255,0,0);  // 17 - 21 left eyebrow    5 points
@@ -37,20 +50,20 @@ static void drawLandmarks(Mat& image, const vector<Point2f>& landmarks) {
 //    for (int i=42; i <= 47; ++i) colors[i] = CV_RGB(0,0,255);  // 42 - 47 right eye       6 points
 //    for (int i=48; i <= 67; ++i) colors[i] = CV_RGB(255,0,0);  // 48 - 67 mouth           20 points
     for (int i = 0; i < landmarks.size(); ++i) {
-        circle(image, landmarks[i], 2, CV_RGB(255, 0, 0), -1);
+        circle(image, landmarks[i], 2, color, -1);
         //circle(image, landmarks[i], 2, colors[i], -1);
     }
 }
 
 static void drawPoses(Mat& image, const Point3f& eulerAngle) {
     stringstream outtext;
-    outtext << "x-rotation: " << std::setprecision(3) << eulerAngle.x;
+    outtext << "x-angle: " << std::setprecision(3) << eulerAngle.x;
     cv::putText(image, outtext.str(), cv::Point(4, 96), cv::FONT_HERSHEY_SIMPLEX, 0.75, cv::Scalar(255, 0, 0));
     outtext.str("");
-    outtext << "y-rotation: " << std::setprecision(3) << eulerAngle.y;
+    outtext << "y-angle: " << std::setprecision(3) << eulerAngle.y;
     cv::putText(image, outtext.str(), cv::Point(4, 120), cv::FONT_HERSHEY_SIMPLEX, 0.75, cv::Scalar(0, 255, 0));
     outtext.str("");
-    outtext << "z-rotation: " << std::setprecision(3) << eulerAngle.z;
+    outtext << "z-angle: " << std::setprecision(3) << eulerAngle.z;
     cv::putText(image, outtext.str(), cv::Point(4, 144), cv::FONT_HERSHEY_SIMPLEX, 0.75, cv::Scalar(0, 0, 255));
 }
 
@@ -91,59 +104,66 @@ bool ImageProcessor::init(const string& modelDir) {
 
 void ImageProcessor::process(Mat& image) {
     Mat gray;
-    Mat gray_hog;
+    Mat hog;
     vector<Rect> boxes;
     vector<float> scores;
     vector<int> indices;
-
     cvtColor(image, gray, COLOR_RGBA2GRAY);
-    resize(gray, gray_hog, gray.size()/2);
+    resize(gray, hog, gray.size()/2);
 
-    mFaceDetector.detect(gray_hog, boxes, scores, &indices);
-    for (Rect& b: boxes) {
-        b.x *= 2;
-        b.y *= 2;
-        b.width *= 2;
-        b.height *= 2;
+    // Face detection
+    mFaceDetector.detect(hog, boxes, scores, &indices);
+    if (boxes.size() == 0)
+        return;
+    Rect box = boxes[0];
+    for (int i = 1; i < boxes.size(); ++i)
+        if (box.width*box.height < boxes[i].width*boxes[i].height)
+            box = boxes[i];
+    box.x *= 2;
+    box.y *= 2;
+    box.width *= 2;
+    box.height *= 2;
+
+    // Landmark detection
+    vector<Point2f> landmarks;
+    mFaceLandmark.fit(gray, box, landmarks);
+
+    // Smoking detection
+    vector<float> smoking_results;
+    Mat smoking_image = mSmokingClassifier.getInput(gray, landmarks);
+    mSmokingClassifier.predict(smoking_image, smoking_results);
+
+    // Calling detection
+    vector<float> left_calling_results;
+    vector<float> right_calling_results;
+    Mat left_calling_input = mCallingClassifier.getInput(gray, landmarks, true);
+    Mat right_calling_input = mCallingClassifier.getInput(gray, landmarks, false);
+    mCallingClassifier.predict(left_calling_input, left_calling_results);
+    mCallingClassifier.predict(right_calling_input, right_calling_results);
+
+    // Pose estimation
+    Point3f pose;
+    mPoseEstimator.estimate(image.size(), landmarks, pose, nullptr, nullptr, true);
+    drawAxis(image, mPoseEstimator.objectPoints(), mPoseEstimator.cameraMatrix(),
+            mPoseEstimator.distCoeffs(), mPoseEstimator.rvec(), mPoseEstimator.tvec());
+
+    // Output status
+    Scalar smoking = cv::Scalar(255, 0, 0, 0);
+    Scalar calling = cv::Scalar(255, 255, 0, 0);
+    Scalar normal = cv::Scalar(0, 255, 0, 0);
+    Scalar color = normal;
+    string label;
+    if (smoking_results[0] > 0.8 || smoking_results[1] > 0.95) {
+        color = smoking;
+        label = format("Smoking: %.2f, %.2f", smoking_results[0], smoking_results[1]);
+    } else if (left_calling_results[0] > 0.8 || right_calling_results[0] > 0.8) {
+        color = calling;
+        label = format("Calling: %.2f, %.2f", left_calling_results[0], right_calling_results[0]);
     }
-    if (boxes.size() > 0) {
-        Rect box = boxes[0];
-        vector<Point2f> landmarks;
-        mFaceLandmark.fit(gray, box, landmarks);
+    drawBoxes(image, box.x, box.y, box.x + box.width, box.y + box.height, label, color);
 
-        vector<float> smoking_results;
-        Mat smoking_image = mSmokingClassifier.getInput(gray, landmarks);
-        mSmokingClassifier.predict(smoking_image, smoking_results);
-
-        vector<float> left_calling_results;
-        vector<float> right_calling_results;
-        Mat left_calling_input = mCallingClassifier.getInput(gray, landmarks, true);
-        Mat right_calling_input = mCallingClassifier.getInput(gray, landmarks, false);
-        mCallingClassifier.predict(left_calling_input, left_calling_results);
-        mCallingClassifier.predict(right_calling_input, right_calling_results);
-
-        // Pose estimation
-        Point3f pose;
-        mPoseEstimator.estimate(image.size(), landmarks, pose);
-        drawAxis(image, mPoseEstimator.objectPoints(), mPoseEstimator.cameraMatrix(),
-                mPoseEstimator.distCoeffs(), mPoseEstimator.rvec(), mPoseEstimator.tvec());
-
-        // Draw face boxes
-        Scalar smoking = cv::Scalar(255, 0, 0, 0);
-        Scalar calling = cv::Scalar(255, 255, 0, 0);
-        Scalar normal = cv::Scalar(0, 255, 0, 0);
-        Scalar color = normal;
-        if (smoking_results[0] > 0.9)
-            color = smoking;
-        else if (left_calling_results[0] > 0.9 || right_calling_results[0] > 0.9)
-            color = calling;
-        string label = format("Smoke: %.2f, %.2f Call: %.2f, %.2f",
-                smoking_results[0], smoking_results[1], left_calling_results[0], right_calling_results[0]);
-        drawBoxes(image, box.x, box.y, box.x + box.width, box.y + box.height, label, color);
-
-        // Draw landmarks
-        drawLandmarks(image, landmarks);
-    }
+    // Draw landmarks
+    drawLandmarks(image, landmarks, color);
 
 }
 

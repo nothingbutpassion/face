@@ -81,13 +81,43 @@ static std::vector<Point3d> objectPointGrads(const vector<Point3d>& objectPoints
     return grads;
 }
 
+//static void adjustObjectPoints(vector<Point3d>& objectPoints, const vector<Point2d>& imagePoints,
+//        const Mat& cameraMatrix, const Mat& distCoeffs, const Mat& rvec, const Mat& tvec) {
+//    std::vector<Point3d> grads = objectPointGrads(objectPoints, imagePoints, cameraMatrix, distCoeffs, rvec, tvec);
+//    vector<Point3d> points = objectPoints;
+//    constexpr double lr = 1e-2;
+//    constexpr double thresh = 4;
+//    for (int i=0; i < points.size(); ++i) {
+//        Point3d d = points[i]- lr*grads[i] - kReferencePoints[i];
+//        if (d.x*d.x + d.y*d.y + d.z*d.z < thresh)
+//            points[i] -= lr*grads[i];
+//    }
+//    vector<double> refErrors = projectErrors(kReferencePoints, imagePoints, cameraMatrix, distCoeffs, rvec, tvec);
+//    vector<double> curErrors = projectErrors(objectPoints, imagePoints, cameraMatrix, distCoeffs, rvec, tvec);
+//    vector<double> newErrors = projectErrors(points, imagePoints, cameraMatrix, distCoeffs, rvec, tvec);
+//    double refErr = 0;
+//    double curErr = 0;
+//    double newErr = 0;
+//    for (int i=0; i < points.size(); ++i) {
+//        refErr += refErrors[i];
+//        curErr += curErrors[i];
+//        newErr += newErrors[i];
+//    }
+//    if (newErr < curErr && newErr < refErr)
+//        objectPoints = points;
+//    else if (refErr < curErr)
+//        objectPoints = kReferencePoints;
+//    //LOGD("project errors: reference=%.2f, current=%.2f, adjusted=%.2f",
+//    //        refErr/points.size(), curErr/points.size(), newErr/points.size());
+//}
+
 static void adjustObjectPoints(vector<Point3d>& objectPoints, const vector<Point2d>& imagePoints,
         const Mat& cameraMatrix, const Mat& distCoeffs, const Mat& rvec, const Mat& tvec) {
     std::vector<Point3d> grads = objectPointGrads(objectPoints, imagePoints, cameraMatrix, distCoeffs, rvec, tvec);
     vector<Point3d> points = objectPoints;
     constexpr double lr = 1e-2;
     constexpr double thresh = 4;
-    for (int i=0; i < points.size(); ++i) { 
+    for (int i=0; i < points.size(); ++i) {
         Point3d d = points[i]- lr*grads[i] - kReferencePoints[i];
         if (d.x*d.x + d.y*d.y + d.z*d.z < thresh)
             points[i] -= lr*grads[i];
@@ -99,16 +129,16 @@ static void adjustObjectPoints(vector<Point3d>& objectPoints, const vector<Point
     double curErr = 0;
     double newErr = 0;
     for (int i=0; i < points.size(); ++i) {
+        if (newErrors[i] < curErrors[i] && newErrors[i] < refErrors[i])
+            objectPoints[i] = points[i];
+        else if (refErrors[i] < curErrors[i])
+            objectPoints[i] = kReferencePoints[i];
         refErr += refErrors[i];
         curErr += curErrors[i];
         newErr += newErrors[i];
     }
-    if (newErr < curErr && newErr < refErr)
-        objectPoints = points;
-    else if (refErr < curErr)
-        objectPoints = kReferencePoints;
-    //LOGD("project errors: reference=%.2f, current=%.2f, adjusted=%.2f",
-    //        refErr/points.size(), curErr/points.size(), newErr/points.size());
+    LOGI("project errors: reference=%.2f, current=%.2f, adjusted=%.2f",
+            refErr/points.size(), curErr/points.size(), newErr/points.size());
 }
 
 SimplePoseEstimator::SimplePoseEstimator() {
