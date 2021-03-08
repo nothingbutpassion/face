@@ -4,7 +4,7 @@
 #include "tflite_calling_classifier.h"
 #include "utils.h"
 
-#define LOG_TAG "CaffeCallingClassifier"
+#define LOG_TAG "TfLiteCallingClassifier"
 
 using namespace std;
 using namespace cv;
@@ -87,7 +87,7 @@ void TfLiteCallingClassifier::predict(const Mat& input, vector<float>& output) {
     output.clear();
     for (int i=0; i < outputTensor->bytes/sizeof(float); i++)
         output.push_back(outputTensor->data.f[i]);
-    LOGI("predict: %dms", int(double(getTickCount()-t)*1000/getTickFrequency()));
+    LOGD("predict: %dms", int(double(getTickCount()-t)*1000/getTickFrequency()));
 }
 
 Mat TfLiteCallingClassifier::getInput(const cv::Mat& gray, const vector<Point2f>& landmarks, bool left) {

@@ -87,7 +87,7 @@ void TfLiteSmokingClassifier::predict(const Mat& input, vector<float>& output) {
     output.clear();
     for (int i=0; i < outputTensor->bytes/sizeof(float); i++)
         output.push_back(outputTensor->data.f[i]);
-    LOGI("predict: %dms", int(double(getTickCount()-t)*1000/getTickFrequency()));
+    LOGD("predict: %dms", int(double(getTickCount()-t)*1000/getTickFrequency()));
 }
 
 Mat TfLiteSmokingClassifier::getInput(const cv::Mat& gray, const vector<Point2f>& landmarks) {
@@ -114,8 +114,8 @@ Mat TfLiteSmokingClassifier::getInput(const cv::Mat& gray, const vector<Point2f>
     }
     float x0 = marks[33].x;
     float y0 = marks[33].y;
-    float w = 0.6*(x_max - x_min);
-    float h = min(w*2/3,  gray.cols - y0);
+    float w = 0.8*(x_max - x_min);
+    float h = w;
     M.at<double>(0,2) -= (x0 - 0.5*w);
     M.at<double>(1,2) -= y0;
     M.at<double>(0,0) *= size.width/w;
