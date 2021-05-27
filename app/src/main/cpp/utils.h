@@ -5,26 +5,23 @@
 #include <vector>
 #include <opencv2/core.hpp>
 
-#define DEBUG_FACE
-#ifdef  DEBUG_FACE
-    #include <android/log.h>
-    #define LOGD(...)   ((void)__android_log_print(ANDROID_LOG_DEBUG, "face", LOG_TAG " " __VA_ARGS__))
-    #define LOGI(...)   ((void)__android_log_print(ANDROID_LOG_INFO,  "face", LOG_TAG " " __VA_ARGS__))
-    #define LOGW(...)   ((void)__android_log_print(ANDROID_LOG_WARN,  "face", LOG_TAG " " __VA_ARGS__))
-    #define LOGE(...)   ((void)__android_log_print(ANDROID_LOG_ERROR, "face", LOG_TAG " " __VA_ARGS__))
+#define DEBUG_DMS
+#ifdef  DEBUG_DMS
+#include <android/log.h>
+#define LOGD(...)   ((void)__android_log_print(ANDROID_LOG_DEBUG, "dms", LOG_TAG " " __VA_ARGS__))
+#define LOGI(...)   ((void)__android_log_print(ANDROID_LOG_INFO,  "dms", LOG_TAG " " __VA_ARGS__))
+#define LOGW(...)   ((void)__android_log_print(ANDROID_LOG_WARN,  "dms", LOG_TAG " " __VA_ARGS__))
+#define LOGE(...)   ((void)__android_log_print(ANDROID_LOG_ERROR, "dms", LOG_TAG " " __VA_ARGS__))
 #else
-    #define LOGD(...)
-    #define LOGI(...)
-    #define LOGW(...)
-    #define LOGE(...)
+#define LOGD(...)
+#define LOGI(...)
+#define LOGW(...)
+#define LOGE(...)
 #endif
-
 
 JNIEnv* getJNIEnv();
 cv::Rect toRect(jobject javaRect, JNIEnv* env = nullptr);
 jobjectArray newRectArray(const std::vector<cv::Rect>& rects, JNIEnv* env = nullptr);
 jobjectArray newPointFArray(const std::vector<cv::Point2f>& points, JNIEnv* env = nullptr);
-
-
 
 #endif // UTILS_H

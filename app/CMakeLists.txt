@@ -58,7 +58,7 @@ set_target_properties(tensorflowlite_gpu PROPERTIES IMPORTED_LOCATION ${TFLITE_G
 # or SHARED, and provides the relative paths to its source code.
 # You can define multiple libraries, and CMake builds them for you.
 # Gradle automatically packages shared libraries with your APK.
-add_library(face SHARED
+add_library(dms SHARED
         src/main/cpp/native_buffer_jni.cpp
         src/main/cpp/image_processor_jni.cpp
         src/main/cpp/image_processor.cpp
@@ -82,14 +82,14 @@ add_library(face SHARED
 
 # NOTES:
 # PRIVATE is necessary, otherwise cmake build issue.
-target_include_directories(face PRIVATE
+target_include_directories(dms PRIVATE
         ${OPENCV_INC_DIR}
         ${DLIB_ROOT}                          # for dlib includes
         ${TFLITE_INC_DIR}                     # for tensorflow lite
         ${TFLITE_GPU_INC_DIR}                 # for tensorflow lite gpu delegate
         )
 
-target_compile_definitions(face PRIVATE
+target_compile_definitions(dms PRIVATE
         -DDLIB_NO_GUI_SUPPORT                 #  for building dlib with no GUI support
 #        -DCV__ENABLE_C_API_CTORS              #  for fixing convertion from cv::Mat to dilb::cv_image<>
         )
@@ -97,7 +97,7 @@ target_compile_definitions(face PRIVATE
 # Specifies libraries CMake should link to your target library. You
 # can link multiple libraries, such as libraries you define in this
 # build script, prebuilt third-party libraries, or system libraries.
-target_link_libraries(face
+target_link_libraries(dms
         android
         log
         opencv
@@ -106,7 +106,7 @@ target_link_libraries(face
         )
 
 add_custom_command(
-        TARGET face PRE_BUILD
+        TARGET dms PRE_BUILD
         COMMAND ${CMAKE_COMMAND} -E copy
                 ${CMAKE_CURRENT_SOURCE_DIR}/models/kazemi_face_landmark.dat
                 ${CMAKE_CURRENT_SOURCE_DIR}/src/main/assets/kazemi_face_landmark.dat

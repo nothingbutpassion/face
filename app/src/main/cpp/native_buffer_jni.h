@@ -17,8 +17,15 @@ JNIEXPORT void JNICALL Java_com_hsae_dms_NativeBuffer_nativeRotate(JNIEnv* env, 
                                                                    jobject srcBuffer, jint srcWidth, jint srcHeight, jint srcStride, jobject dstBuffer, jint dstStride, jint rotateCode);
 JNIEXPORT void JNICALL Java_com_hsae_dms_NativeBuffer_nativeDecode(JNIEnv* env, jclass cls,
                                                                    jobject srcBuffer, jint srcSize, jobject dstBuffer, jint dstWidth, jint dstHeight, jint dstStride);
+
+
+JNIEXPORT void JNICALL Java_com_hsae_dms_NativeBuffer_native420ToRGBA(JNIEnv* env, jclass cls,
+                                                                       jobject y, jobject u, jobject v, int uStride,
+                                                                       jint width, jint height, jobject dstBuffer);
+
 JNIEXPORT void JNICALL Java_com_hsae_dms_NativeBuffer_nativeNV21ToRGBA(JNIEnv* env, jclass cls,
-                                                                       jbyteArray srcBuffer, jobject dstBuffer, jint dstWidth, jint dstHeight, jint dstStride);
+                                                                       jbyteArray srcBuffer, jobject dstBuffer,
+                                                                       jint dstWidth, jint dstHeight, jint dstStride);
 #ifdef __cplusplus
 }
 #endif

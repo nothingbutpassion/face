@@ -1,24 +1,20 @@
 package com.hsae.dms;
-
 import android.graphics.ImageFormat;
 import android.graphics.SurfaceTexture;
 import android.hardware.Camera;
 import android.util.Log;
-
-
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.List;
 
 public class CameraUtils {
-    private final static String TAG = "face";
+    private final static String TAG = "dms";
     private Camera mCamera;
     private CaptureListener mCaptureListener;
     private int mCaptureFps = 15;
     private int mCaptureWidth = 640;
     private int mCaptureHeight = 480;
 
-    // This listener is invoked when an image is captured
     public interface CaptureListener {
         void onCaptured(byte[] nv21, int width, int height);
     }
@@ -56,9 +52,17 @@ public class CameraUtils {
         }
     }
 
-//    public int getCaptureWidth() { return mCaptureWidth; }
-//    public int getCaptureHeight() { return mCaptureHeight; }
-//    public int getCaptureFps() { return mCaptureFps; }
+    public int getCaptureWidth() {
+        return mCaptureWidth;
+    }
+
+    public int getCaptureHeight() {
+        return mCaptureHeight;
+    }
+
+    public int getCaptureFps() {
+        return mCaptureFps;
+    }
 
     private Camera.Size selectCaptureSize(Camera.Parameters parameters) {
         List<Camera.Size> sizes = parameters.getSupportedPictureSizes();
@@ -66,7 +70,7 @@ public class CameraUtils {
         float maxIOU = (float)(Math.min(size.width, mCaptureWidth)*Math.min(size.height, mCaptureHeight))
                 /(Math.max(size.width, mCaptureWidth)*Math.max(size.height, mCaptureHeight));
         for (Camera.Size s: sizes) {
-            Log.i(TAG,"supported size: " + s.width + "x"  + s.height);
+            Log.i(TAG,"supported capture size: " + s.width + "x"  + s.height);
             float iou = (float)(Math.min(s.width, mCaptureWidth)*Math.min(s.height, mCaptureHeight))
                     /(Math.max(s.width, mCaptureWidth)*Math.max(s.height, mCaptureHeight));
             if (iou > maxIOU) {
@@ -74,7 +78,7 @@ public class CameraUtils {
                 size = s;
             }
         }
-        Log.i(TAG, "selected size:"  + size.width + "x"  + size.height);
+        Log.i(TAG, "selected capture size:"  + size.width + "x"  + size.height);
         return size;
     }
 
@@ -82,7 +86,7 @@ public class CameraUtils {
         List<int[]> fpsRanges = parameters.getSupportedPreviewFpsRange();
         int[] fpsRange = fpsRanges.get(0);
         for (int[] range: fpsRanges) {
-            Log.i(TAG,"supported fps range: [" + range[0]/1000.0 + ", " + range[1]/1000.0 + "]");
+            Log.i(TAG,"supported capture fps range: [" + range[0]/1000.0 + ", " + range[1]/1000.0 + "]");
             if  (range[0] <= 1000*mCaptureFps &&  1000*mCaptureFps <= range[1]) {
                 fpsRange = range;
                 // Try to set the specified fps
@@ -90,7 +94,7 @@ public class CameraUtils {
                 break;
             }
         }
-        Log.i(TAG, "selected fps range: [" + fpsRange[0]/1000.0 + ", " + fpsRange[1]/1000.0 + "]");
+        Log.i(TAG, "selected capture fps range: [" + fpsRange[0]/1000.0 + ", " + fpsRange[1]/1000.0 + "]");
         return fpsRange;
     }
 

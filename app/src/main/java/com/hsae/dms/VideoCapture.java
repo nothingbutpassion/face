@@ -17,40 +17,51 @@ import android.media.ImageReader;
 import android.os.Handler;
 import android.os.HandlerThread;
 import android.util.Log;
+import android.util.Range;
 import android.util.Size;
 import android.view.Surface;
 import android.view.WindowManager;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 
 public class VideoCapture {
-    private static final String TAG = "face";
-
+    private static final String TAG = "dms";
     private final Context mContext;
 
-    // These params can be set before open, may be changed in open, but fixed after open
+    /**
+     * The following params can be set before open(), but fixed after open()
+     */
     private int mCameraFacing = CameraCharacteristics.LENS_FACING_FRONT;
     private int mOutputWidth = 640;
     private int mOutputHeight = 480;
     private int mOutputFormat = PixelFormat.RGBA_8888;
+    private Range<Integer> mCameraFpsRanges = new Range<Integer>(5, 30);
     private Surface mPreviewSurface;
 
-    // Capture listener can be set before open, can be changed after open
-    // NOTES: current implementation is not thread-safe
+    /**
+     * Capture listener can be set before open()
+     */
     private CaptureListener mCaptureListener;
 
-    // Camera sensor-orientation/device/capture-session is orderly got in open process..
+    /**
+     * Camera sensor-orientation/device/capture-session can be got open().
+     */
     private int mSensorOrientation = 0;
     private CameraDevice mCameraDevice;
     private CameraCaptureSession mCameraCaptureSession;
 
-    // Background thread & handler
+    /**
+     * Background thread & handler
+     */
     private HandlerThread mBackgroundThread;
     private Handler mBackgroundHandler;
 
-    // This listener is invoked when an image is captured
+    /**
+     * This listener is invoked when an image is captured
+     */
     public interface CaptureListener {
         void onCaptured(Image image);
     }
@@ -63,9 +74,11 @@ public class VideoCapture {
         mPreviewSurface = surface;
     }
 
-    // NOTES:
-    // Camera device: 0 - front camera, 1 - back camera, 2 - external camera.
-    // Must be same as CameraCharacteristics.LENS_FACING_FRONT/BACK/EXTERNAL
+    /**
+     * Set capture device
+     * @param device capture device id: 0 - front camera, 1 - back camera, 2 - external camera.
+     * @apiNote The device id is corresponding to CameraCharacteristics.LENS_FACING_FRONT/BACK/EXTERNAL
+     */
     public void setCaptureDevice(int device) {
         mCameraFacing = device;
     }
@@ -93,18 +106,18 @@ public class VideoCapture {
                 @Override
                 public void onOpened(CameraDevice camera) {
                     mCameraDevice = camera;
-                    Log.i(TAG, "camera: " + cameraId + " opened");
+                    Log.i(TAG, "camera " + cameraId + " opened");
                     startCapture();
                 }
                 @Override
                 public void onDisconnected(CameraDevice camera) {
-                    Log.e(TAG, "camera: " + cameraId + " disconnected");
+                    Log.e(TAG, "camera " + cameraId + " disconnected");
                     camera.close();
                     mCameraDevice = null;
                 }
                 @Override
                 public void onError(CameraDevice camera, int error) {
-                    Log.e(TAG, "camera: " + cameraId + " error: " + error);
+                    Log.e(TAG, "camera " + cameraId + " error: " + error);
                     camera.close();
                     mCameraDevice = null;
                 }
@@ -129,16 +142,22 @@ public class VideoCapture {
         return new Size(mOutputWidth, mOutputHeight);
     }
 
-    // Counter-clockwise rotate degrees: 0, 90, 180, 270
+    /**
+     * Get capture rotate degrees
+     * @return Counter-clockwise rotate degrees: 0, 90, 180, 270
+     */
     public int getCaptureRotation() {
         // NOTES:
-        // 1) Output image needs to be rotated clockwise to be upright on the device screen in its native orientation.
+        // 1) Capture image needs to be rotated clockwise to be upright on the device screen in its native orientation.
         // 2) But Display is rotated counter-clockwise from its "natural" orientation
         // The total rotation of output image should be calculated as following formula.
        return (mSensorOrientation - getDisplayRotation() + 360)%360;
     }
 
-    // Flipping: 0 - No flipping, 1 - Horizontal flipping  2 - Vertical flipping, 3 - Horizontal & Vertical flipping
+    /**
+     * Get capture flipping code
+     * @return flipping code: 0 - No flipping, 1 - Horizontal flipping  2 - Vertical flipping, 3 - Horizontal & Vertical flipping
+     */
     public int getCaptureFlipping() {
         // 0 - No flipping
         if (mCameraFacing != CameraCharacteristics.LENS_FACING_FRONT) {
@@ -219,7 +238,6 @@ public class VideoCapture {
             imageReader.setOnImageAvailableListener(new ImageReader.OnImageAvailableListener() {
                 @Override
                 public void onImageAvailable(ImageReader reader) {
-                    // Image image = reader.acquireNextImage();
                     Image image = reader.acquireLatestImage();
                     if (image != null) {
                         if (mCaptureListener != null) {
@@ -229,26 +247,25 @@ public class VideoCapture {
                     }
                 }
             }, mBackgroundHandler);
-            // NOTES:
-            // Arrays.asList() returns a fixed-sized list which can be changed.
+
             List<Surface> outputSurfaces = new ArrayList<>();
             outputSurfaces.add(imageReader.getSurface());
             if (mPreviewSurface != null) {
                 outputSurfaces.add(mPreviewSurface);
             }
-
             // Create capture session
             mCameraDevice.createCaptureSession(outputSurfaces, new CameraCaptureSession.StateCallback() {
                 @Override
                 public void onConfigured(CameraCaptureSession session) {
                     try {
                         mCameraCaptureSession = session;
-                        // Create capture request
                         // NOTES:
-                        // Template type CameraDevice.TEMPLATE_PREVIEW can't work on imx8 device
-                        int templateType = (mOutputFormat == PixelFormat.RGBA_8888 ? CameraDevice.TEMPLATE_PREVIEW : CameraDevice.TEMPLATE_STILL_CAPTURE);
+                        // Template type CameraDevice.TEMPLATE_PREVIEW can't work on previous imx8 device
+                        // For previous imx8, set as CameraDevice.TEMPLATE_STILL_CAPTURE for workaround
+                        int templateType = CameraDevice.TEMPLATE_PREVIEW;
                         CaptureRequest.Builder builder = mCameraDevice.createCaptureRequest(templateType);
                         builder.set(CaptureRequest.CONTROL_AF_MODE, CaptureRequest.CONTROL_AF_MODE_CONTINUOUS_PICTURE);
+                        builder.set(CaptureRequest.CONTROL_AE_TARGET_FPS_RANGE, mCameraFpsRanges);
                         builder.addTarget(imageReader.getSurface());
                         if (mPreviewSurface != null) {
                             builder.addTarget(mPreviewSurface);
@@ -296,7 +313,7 @@ public class VideoCapture {
                 characteristics = manager.getCameraCharacteristics(cameraId);
                 int facing = characteristics.get(CameraCharacteristics.LENS_FACING);
                 if (facing == mCameraFacing) {
-                    Log.i(TAG, "camera: " + cameraId + " is selected");
+                    Log.i(TAG, "camera " + cameraId + " is selected");
                     Log.i(TAG, "lens facing: " + (facing == 0 ? "front" : (facing == 1 ? "back" : "external")));
                     selected = cameraId;
                     break;
@@ -307,7 +324,7 @@ public class VideoCapture {
                 selected = cameraIds[0];
                 characteristics = manager.getCameraCharacteristics(selected);
                 mCameraFacing = characteristics.get(CameraCharacteristics.LENS_FACING);
-                Log.i(TAG, "camera: " + selected + " is selected");
+                Log.i(TAG, "camera " + selected + " is selected");
                 Log.i(TAG, "lens facing: " + (mCameraFacing == 0 ? "front" : (mCameraFacing == 1 ? "back" : "external")));
             }
 
@@ -319,31 +336,25 @@ public class VideoCapture {
             //  Stream configuration map
             StreamConfigurationMap map = characteristics.get(CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP);
             int[] formats = map.getOutputFormats();
-            // For debugging supported output formats & sizes
             for (int format : formats) {
-                StringBuilder outputFormat = new StringBuilder();
-                outputFormat.append("output format: " + format + " size: ");
                 Size[] sizes = map.getOutputSizes(format);
-                for (Size s : sizes) {
-                    outputFormat.append(" " + s.getWidth() + "x" + s.getHeight());
-                }
-                Log.d(TAG, outputFormat.toString());
+                StringBuilder outputFormat = new StringBuilder();
+                outputFormat.append("capture format: " + format + ", sizes: " + Arrays.toString(sizes));
+                Log.i(TAG, outputFormat.toString());
             }
-
             // Select output format
             if (!map.isOutputSupportedFor(mOutputFormat)) {
                 if (map.isOutputSupportedFor(PixelFormat.RGBA_8888)) {
                     mOutputFormat = PixelFormat.RGBA_8888;
-                } else if (map.isOutputSupportedFor(ImageFormat.JPEG)) {
-                    mOutputFormat = ImageFormat.JPEG;
                 } else if (map.isOutputSupportedFor(ImageFormat.YUV_420_888)) {
                     mOutputFormat = ImageFormat.YUV_420_888;
+                } else if (map.isOutputSupportedFor(ImageFormat.JPEG)) {
+                    mOutputFormat = ImageFormat.JPEG;
                 } else {
                     mOutputFormat = formats[0];
                 }
             }
-
-            // Select output size
+            // Select capture size
             Size[] sizes = map.getOutputSizes(mOutputFormat);
             Size size = sizes[0];
             for (Size s : sizes) {
@@ -359,15 +370,26 @@ public class VideoCapture {
             }
             mOutputWidth = size.getWidth();
             mOutputHeight = size.getHeight();
-            Log.i(TAG, "output size: " + mOutputWidth + "x" + mOutputHeight + "is selected");
-
+            Log.i(TAG, "capture size " + mOutputWidth + "x" + mOutputHeight + "is selected");
             // NOTES:
             // In most case, you can pass a RGBA_8888 SurfaceView as the output for camera review.
-            // So, RGBA_8888 is impliedly supported by most mobile phone cameras (excepts imx8)
-            if (cameraIds.length > 1) {
-                mOutputFormat = PixelFormat.RGBA_8888;
+            // So, RGBA_8888 is impliedly supported by most mobile phone cameras
+            // Uncomment the following if necessary
+            // if (cameraIds.length > 1) {
+            //     mOutputFormat = PixelFormat.RGBA_8888;
+            // }
+            Log.i(TAG, "capture format " + mOutputFormat + " is selected");
+
+            // Select fps range
+            Range<Integer>[] fpsRanges = characteristics.get(CameraCharacteristics.CONTROL_AE_AVAILABLE_TARGET_FPS_RANGES);
+            Log.i(TAG, "available fps ranges: " + Arrays.toString(fpsRanges));
+            mCameraFpsRanges = fpsRanges[0];
+            for (Range<Integer> fpsRange: fpsRanges) {
+                if (mCameraFpsRanges.getLower() < fpsRange.getLower())
+                    mCameraFpsRanges = fpsRange;
             }
-            Log.i(TAG, "output format: " + mOutputFormat + " is selected");
+            Log.i(TAG, "fps range " + mCameraFpsRanges + " is selected");
+
         } catch (CameraAccessException e) {
             selected = null;
             e.printStackTrace();

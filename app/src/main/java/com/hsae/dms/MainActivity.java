@@ -24,10 +24,39 @@ import java.io.IOException;
 import java.io.InputStream;
 
 public class MainActivity extends Activity {
-    private final String TAG = "face";
+    private final String TAG = "dms";
     private ImageProcessor mImageProcessor = new ImageProcessor();
     private VideoCapture mVideoCapture = new VideoCapture(MainActivity.this);
     private Surface mPreviewSurface;
+    private VideoCapture.CaptureListener mCaptureListener = new VideoCapture.CaptureListener() {
+        @Override
+        public void onCaptured(Image image) {
+            long t = System.currentTimeMillis();
+            NativeBuffer nativeBuffer = NativeBuffer.fromImage(image);
+            Log.i(TAG, "create native buffer from image: " + (System.currentTimeMillis() - t) + "ms");
+            processFrame(nativeBuffer);
+        }
+    };
+
+    private SurfaceHolder.Callback mSurfaceCallback = new SurfaceHolder.Callback() {
+        @Override
+        public void surfaceCreated(SurfaceHolder holder) {
+            Log.i(TAG, "surface created.");
+            mPreviewSurface = holder.getSurface();
+            mVideoCapture.open();
+            mVideoCapture.setCaptureListener(mCaptureListener);
+        }
+        @Override
+        public void surfaceChanged(SurfaceHolder holder, int format, int width, int height) {
+            Log.i(TAG, "surface changed: width=" + width + " height=" + height + " format=" + format);
+        }
+        @Override
+        public void surfaceDestroyed(SurfaceHolder holder) {
+            mVideoCapture.close();
+            mPreviewSurface = null;
+            Log.i(TAG, "surface destroyed.");
+        }
+    };
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -42,22 +71,19 @@ public class MainActivity extends Activity {
         // Enables regular immersive mode.
         // For "lean back" mode, remove SYSTEM_UI_FLAG_IMMERSIVE.
         // Or for "sticky immersive," replace it with SYSTEM_UI_FLAG_IMMERSIVE_STICKY
-        /*
-        View decorView = getWindow().getDecorView();
-        decorView.setSystemUiVisibility(
-                View.SYSTEM_UI_FLAG_IMMERSIVE
-                // Set the content to appear under the system bars so that the
-                // content doesn't resize when the system bars hide and show.
-                | View.SYSTEM_UI_FLAG_LAYOUT_STABLE
-                | View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION
-                | View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN
-                // Hide the nav bar and status bar
-                | View.SYSTEM_UI_FLAG_HIDE_NAVIGATION
-                | View.SYSTEM_UI_FLAG_FULLSCREEN);
-        */
-
+        // View decorView = getWindow().getDecorView();
+        // decorView.setSystemUiVisibility(
+        //                View.SYSTEM_UI_FLAG_IMMERSIVE
+        //                // Set the content to appear under the system bars so that the
+        //                // content doesn't resize when the system bars hide and show.
+        //                | View.SYSTEM_UI_FLAG_LAYOUT_STABLE
+        //                | View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION
+        //                | View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN
+        //                // Hide the nav bar and status bar
+        //                | View.SYSTEM_UI_FLAG_HIDE_NAVIGATION
+        //                | View.SYSTEM_UI_FLAG_FULLSCREEN);
         // Set screen orientation as portrait
-        //setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE);
+        // setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE);
 
         // Remember that you should never show the action bar
         getWindow().getDecorView().setSystemUiVisibility(View.SYSTEM_UI_FLAG_FULLSCREEN);
@@ -65,48 +91,12 @@ public class MainActivity extends Activity {
         if (actionBar != null) {
             actionBar.hide();
         }
-
         setContentView(R.layout.activity_main);
-        SurfaceView surfaceView = (SurfaceView) findViewById(R.id.preview);
+        SurfaceView surfaceView = findViewById(R.id.preview);
         surfaceView.getHolder().setFormat(PixelFormat.RGBA_8888);
-//        surfaceView.setOnClickListener(new View.OnClickListener() {
-//            private int cameraDevice = 0;
-//            @Override
-//            public void onClick(View v) {
-//                mVideoCapture.close();
-//                cameraDevice = (cameraDevice + 1) % 2;
-//                mVideoCapture.setCaptureDevice(cameraDevice);
-//                mVideoCapture.open();
-//            }
-//        });
-        surfaceView.getHolder().addCallback(new SurfaceHolder.Callback() {
-            @Override
-            public void surfaceCreated(SurfaceHolder holder) {
-                Log.i(TAG, "surface created.");
-                mPreviewSurface = holder.getSurface();
-                mVideoCapture.setCaptureListener(new VideoCapture.CaptureListener() {
-                    @Override
-                    public void onCaptured(Image image) {
-                        long t = System.currentTimeMillis();
-                        NativeBuffer nativeBuffer = NativeBuffer.fromImage(image);
-                        Log.i(TAG, "NativeBuffer.fromImage: " + (System.currentTimeMillis() - t) + "ms");
-                        processFrame(nativeBuffer);
-                    }
-                });
-                mVideoCapture.open();
-            }
-            @Override
-            public void surfaceChanged(SurfaceHolder holder, int format, int width, int height) {
-                Log.i(TAG, "surface changed: width=" + width + " height=" + height + " format=" + format);
-            }
-            @Override
-            public void surfaceDestroyed(SurfaceHolder holder) {
-                Log.i(TAG, "surface destroyed.");
-                mVideoCapture.close();
-                mPreviewSurface = null;
-            }
-        });
+        surfaceView.getHolder().addCallback(mSurfaceCallback);
         mImageProcessor.open();
+
     }
 
     @Override
@@ -131,29 +121,29 @@ public class MainActivity extends Activity {
         startActivity(getIntent());
     }
 
-    // Used to load the 'native-lib' library on application startup.
     static {
-        System.loadLibrary("face");
+        System.loadLibrary("dms");
     }
 
     private void processFrame(NativeBuffer nativeBuffer) {
-        long t1 = System.currentTimeMillis();
+        long t = System.currentTimeMillis();
         nativeBuffer = nativeBuffer.rotate(mVideoCapture.getCaptureRotation());
-        Log.i(TAG, "NativeBuffer.rotate: " + (System.currentTimeMillis() - t1) + "ms");
+        Log.d(TAG, "rotate: " + (System.currentTimeMillis() - t) + "ms");
 
-        long t2 = System.currentTimeMillis();
+        t = System.currentTimeMillis();
         nativeBuffer = nativeBuffer.flip(mVideoCapture.getCaptureFlipping());
-        Log.i(TAG, "NativeBuffer.flip: " + (System.currentTimeMillis() - t2) + "ms");
+        Log.d(TAG, "flip: " + (System.currentTimeMillis() - t) + "ms");
 
-        long t3 = System.currentTimeMillis();
+        t = System.currentTimeMillis();
         mImageProcessor.process(nativeBuffer);
-        Log.i(TAG, "ImageProcessor.process: " + (System.currentTimeMillis() - t3) + "ms");
+        Log.d(TAG, "process: " + (System.currentTimeMillis() - t) + "ms");
 
-        long t4 = System.currentTimeMillis();
+        t = System.currentTimeMillis();
         if (mPreviewSurface != null && mPreviewSurface.isValid()) {
             nativeBuffer.draw(mPreviewSurface);
         }
-        Log.i(TAG, "NativeBuffer.draw: " + (System.currentTimeMillis() - t4) + "ms");
+
+        Log.d(TAG, "draw: " + (System.currentTimeMillis() - t) + "ms");
     }
 
     private  boolean requestPermissions() {
@@ -179,7 +169,7 @@ public class MainActivity extends Activity {
 
     public static boolean copyFile(Context context, String assetFile) {
         AssetManager assetManager = context.getAssets();
-        String saveDir = Environment.getExternalStorageDirectory() + File.separator + "Face";
+        String saveDir = Environment.getExternalStorageDirectory() + File.separator + "dms";
         String saveFile = saveDir +  File.separator + assetFile;
         if (new File(saveFile).isFile()) {
             return true;

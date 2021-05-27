@@ -89,6 +89,38 @@ JNIEXPORT void JNICALL Java_com_hsae_dms_NativeBuffer_nativeDecode(JNIEnv* env, 
     cvtColor(img, dst, COLOR_BGR2RGBA);
 }
 
+JNIEXPORT void JNICALL Java_com_hsae_dms_NativeBuffer_native420ToRGBA(JNIEnv* env, jclass cls,
+    jobject y, jobject u, jobject v, jint uStride,
+    jint width, jint height, jobject dstBuffer) {
+    uint8_t* yImg = (uint8_t*)env->GetDirectBufferAddress(y);
+    uint8_t* uImg = (uint8_t*)env->GetDirectBufferAddress(u);
+    uint8_t* vImg = (uint8_t*)env->GetDirectBufferAddress(v);
+    uint8_t* yEnd = yImg + width*height;
+
+    Mat dst(height, width, CV_8UC4, env->GetDirectBufferAddress(dstBuffer), width*4);
+    if (yEnd == uImg) {
+        // YUV
+        Mat src(height*3/2, width, CV_8UC1, yImg);
+        if (uStride == 2) {
+            // Semi-planar NV12: yyyy uv uv
+            cvtColor(src, dst, COLOR_YUV2RGBA_NV12);
+        } else {
+            // Plannar I420: yyyy uu vv
+            cvtColor(src, dst, COLOR_YUV2RGBA_I420);
+        }
+    } else if (yEnd == vImg) {
+        // YVU
+        Mat src(height*3/2, width, CV_8UC1, yImg);
+        if (uStride == 2) {
+            // Semi-planar NV21: yyyy vu vu
+            cvtColor(src, dst, COLOR_YUV2RGBA_NV21);
+        } else {
+            // Plannar YV12: yyyy uu vv
+            cvtColor(src, dst, COLOR_YUV2RGBA_YV12);
+        }
+    }
+}
+
 JNIEXPORT void JNICALL Java_com_hsae_dms_NativeBuffer_nativeNV21ToRGBA(JNIEnv* env, jclass cls,
     jbyteArray srcBuffer, jobject dstBuffer, jint dstWidth, jint dstHeight, jint dstStride) {
     Mat rgba(dstHeight, dstWidth, CV_8UC4, env->GetDirectBufferAddress(dstBuffer), dstStride);

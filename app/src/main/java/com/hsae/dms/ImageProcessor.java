@@ -1,20 +1,13 @@
 package com.hsae.dms;
-
 import android.graphics.PixelFormat;
-import android.graphics.PointF;
-import android.graphics.Rect;
 import android.os.Environment;
-
 import java.nio.ByteBuffer;
 
 public class ImageProcessor {
-
-    // Native face detector handle
     private long mNativeHandle = 0;
 
-
     public boolean open() {
-        mNativeHandle = nativeCreate(Environment.getExternalStorageDirectory() + "/Face");
+        mNativeHandle = nativeCreate(Environment.getExternalStorageDirectory() + "/dms");
         return (mNativeHandle != 0);
     }
 
@@ -28,18 +21,18 @@ public class ImageProcessor {
         if (mNativeHandle == 0 || nativeBuffer.getFormat() != PixelFormat.RGBA_8888) {
             return false;
         }
-       nativeProcess(mNativeHandle,  nativeBuffer.getByteBuffer(),
-               nativeBuffer.getWidth(), nativeBuffer.getHeight(), nativeBuffer.getStride());
+        nativeProcess(mNativeHandle,  nativeBuffer.getByteBuffer(),
+                nativeBuffer.getWidth(), nativeBuffer.getHeight(), nativeBuffer.getStride());
         return true;
     }
 
-    // Create native face detector
+    // Create native image processor
     private static native long nativeCreate(String modelDir) ;
 
-    // Destroy native face detector
+    // Destroy native image processor
     private static native void nativeDestroy(long nativeHandle);
 
-    // Process all face related stuff
+    // Native image process
     private static native void nativeProcess(long nativeHandle, ByteBuffer byteBuffer, int width, int height, int stride);
 
 }
