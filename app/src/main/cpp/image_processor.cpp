@@ -16,7 +16,7 @@
 using namespace std;
 using namespace cv;
 
-static void drawBoxes(const Mat& frame, int left, int top, int right, int bottom, const string& label, const Scalar& color) {
+static void drawBoxes(const Mat& frame, int left, int top, int right, int bottom, const Scalar& color) {
     const int d = 32;
     if (d > (right - left)/2 || d > (bottom - top)/2 )
         rectangle(frame, Point(left, top), Point(right, bottom), color);
@@ -30,13 +30,14 @@ static void drawBoxes(const Mat& frame, int left, int top, int right, int bottom
         line(frame, Point(left, bottom), Point(left+d, bottom), color, 2, LINE_AA);
         line(frame, Point(left, bottom), Point(left, bottom-d), color, 2, LINE_AA);
     }
-    if (label.size() > 0) {
-        int baseLine;
-        Size textSize = getTextSize(label, FONT_HERSHEY_SIMPLEX, 1, 2, &baseLine);
-        int x0 = (frame.cols - textSize.width)/2;
-        int y0 = baseLine + textSize.height;
-        putText(frame, label, Point(x0, y0), FONT_HERSHEY_SIMPLEX, 1, color, 2);
-    }
+}
+
+static void drawText(const Mat& frame, const string& text, const Scalar& color) {
+    int baseLine;
+    Size textSize = getTextSize(text, FONT_HERSHEY_SIMPLEX, 1, 2, &baseLine);
+    int x0 = (frame.cols - textSize.width)/2;
+    int y0 = baseLine + textSize.height;
+    putText(frame, text, Point(x0, y0), FONT_HERSHEY_SIMPLEX, 1, color, 2);
 }
 
 static void drawLandmarks(Mat& image, const vector<Point2f>& landmarks, const Scalar& color) {
@@ -106,7 +107,7 @@ namespace {
     }
 
     double faceScale(const Rect& lastFaceBox) {
-        Rect r = lastFaceBox;
+        const Rect& r = lastFaceBox;
         //LOGD("getScale last_box=(%d, %d, %d, %d)", r.x, r.y, r.width, r.height);
         return 96.0/r.width;
         //LOGD("getScale scale=%.3f",  96.0/std::max(r.width, r.height));
@@ -353,11 +354,7 @@ void ImageProcessor::process(Mat& image) {
         resize(y(roi), gray, Size(roi.width*scale, roi.height*scale));
         LOGD("guess roi: (%d, %d, %d, %d) resize to: %d x %d", roi.x, roi.y, roi.width, roi.height, gray.cols, gray.rows);
     } else {
-        Size s = y.size();
-        if (scale != 1.0)
-            resize(y, gray, Size(s.width*scale, s.height*scale));
-        else
-            gray = y;
+        resize(y, gray, Size(), scale, scale);
         LOGD("reset roi: (%d, %d, %d, %d) resize to: %d x %d", roi.x, roi.y, roi.width, roi.height, gray.cols, gray.rows);
     }
 
@@ -381,8 +378,6 @@ void ImageProcessor::process(Mat& image) {
     box.y = roi.y + box.y/scale;
     box.width = box.width/scale;
     box.height= box.height/scale;
-    LOGD("face box: (%d, %d, %d, %d), score: %.2f, detector: %d",
-         box.x, box.y, box.width, box.height, scores[maxBoxIndex], indices[maxBoxIndex]);
     LOGD("face box: (%d, %d, %d, %d), score: %.2f, detector: %d",
          box.x, box.y, box.width, box.height, scores[maxBoxIndex], indices[maxBoxIndex]);
 
@@ -457,7 +452,7 @@ void ImageProcessor::process(Mat& image) {
     if (label != "") {
         color = CV_RGB(0, 0, 255);
     }
-    drawBoxes(image, box.x, box.y, box.x + box.width, box.y + box.height, label, color);
+    drawText(image, label, color);
     drawLandmarks(image, landmarks, color);
     drawAxis(image, mPoseEstimator.objectPoints(), mPoseEstimator.cameraMatrix(),
              mPoseEstimator.distCoeffs(), mPoseEstimator.rvec(), mPoseEstimator.tvec());
