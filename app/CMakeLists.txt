@@ -33,24 +33,27 @@ cmake_minimum_required(VERSION 3.4.1)
 # NOTES:
 # Set OPENCV_INC_DIR/OPENCV_LIB as OpenCV include directory/lib path
 # ${ANDROID_ABI} is set by gradle. see */cmake/<debug or release>/<abi>/cmake_build_command.txt
-set(OPENCV_INC_DIR "D:/share/opencv-4.3.0-android-sdk/sdk/native/jni/include")
-set(OPENCV_LIB "D:/share/opencv-4.3.0-android-sdk/sdk/native/libs/${ANDROID_ABI}/libopencv_java4.so")
+set(OPENGC_DIR "D:/share/opencv-4.5.1-android-sdk")
+set(OPENCV_INC_DIR "${OPENGC_DIR}/sdk/native/jni/include")
+set(OPENCV_LIB "${OPENGC_DIR}/sdk/native/libs/${ANDROID_ABI}/libopencv_java4.so")
 add_library(opencv SHARED IMPORTED )
 set_target_properties(opencv PROPERTIES IMPORTED_LOCATION ${OPENCV_LIB})
 
 # NOTES:
 # We directly use dlib source, so set the dlib root dir for finding
-set(DLIB_ROOT "D:/share/dlib-19.21")
+set(DLIB_DIR "D:/share/dlib-19.21")
 
 # NOTES:
 # For tensorflow lite
-set(TFLITE_INC_DIR  "D:/share/tensorflow-lite-2.3.0/headers")
-set(TFLITE_LIB "D:/share/tensorflow-lite-2.3.0/jni/${ANDROID_ABI}/libtensorflowlite_jni.so")
+set(TFLITE_DIR "D:/share/tensorflow-lite-2.9.0")
+set(TFLITE_INC_DIR  "${TFLITE_DIR}/headers")
+set(TFLITE_LIB "${TFLITE_DIR}/jni/${ANDROID_ABI}/libtensorflowlite_jni.so")
 add_library(tensorflowlite SHARED IMPORTED )
 set_target_properties(tensorflowlite PROPERTIES IMPORTED_LOCATION ${TFLITE_LIB})
 # For tensoflow lite gpu delegate
-set(TFLITE_GPU_INC_DIR  "D:/share/tensorflow-lite-gpu-2.3.0/headers")
-set(TFLITE_GPU_LIB "D:/share/tensorflow-lite-gpu-2.3.0/jni/${ANDROID_ABI}/libtensorflowlite_gpu_jni.so")
+set(TFLITE_GPU_DIR "D:/share/tensorflow-lite-gpu-2.9.0")
+set(TFLITE_GPU_INC_DIR  "${TFLITE_GPU_DIR}/headers")
+set(TFLITE_GPU_LIB "${TFLITE_GPU_DIR}/jni/${ANDROID_ABI}/libtensorflowlite_gpu_jni.so")
 add_library(tensorflowlite_gpu SHARED IMPORTED )
 set_target_properties(tensorflowlite_gpu PROPERTIES IMPORTED_LOCATION ${TFLITE_GPU_LIB})
 
@@ -69,7 +72,7 @@ add_library(face SHARED
         src/main/cpp/kazemi_face_landmark.cpp
         src/main/cpp/simple_pose_estimator.cpp
         src/main/cpp/utils.cpp
-        ${DLIB_ROOT}/dlib/all/source.cpp        # for dlib
+        ${DLIB_DIR}/dlib/all/source.cpp        # for dlib
         )
 
 # Searches for a specified prebuilt library and stores the path as a
@@ -82,21 +85,24 @@ add_library(face SHARED
 
 # NOTES:
 # PRIVATE is necessary, otherwise cmake build issue.
-target_include_directories(face PRIVATE
+target_include_directories(
+        face PRIVATE
         ${OPENCV_INC_DIR}
-        ${DLIB_ROOT}                          # for dlib includes
+        ${DLIB_DIR}                          # for dlib includes
         ${TFLITE_INC_DIR}                     # for tensorflow lite
         ${TFLITE_GPU_INC_DIR}                 # for tensorflow lite gpu delegate
         )
 
-target_compile_definitions(face PRIVATE
+target_compile_definitions(
+        face PRIVATE
         -DDLIB_NO_GUI_SUPPORT                 #  for building dlib with no GUI support
         )
 
 # Specifies libraries CMake should link to your target library. You
 # can link multiple libraries, such as libraries you define in this
 # build script, prebuilt third-party libraries, or system libraries.
-target_link_libraries(face
+target_link_libraries(
+        face
         android
         log
         opencv
@@ -118,7 +124,8 @@ add_custom_command(
         )
 
 
-add_executable(test_tflite
+add_executable(
+        test_tflite
         src/main/cpp/test_tflite_inference.cpp
         src/main/cpp/tflite_wrapper.cpp
         )
@@ -127,7 +134,8 @@ target_include_directories(test_tflite PRIVATE
         ${TFLITE_INC_DIR}
         ${TFLITE_GPU_INC_DIR}
         )
-target_link_libraries(test_tflite
+target_link_libraries(
+        test_tflite
         log
         z
         mediandk
@@ -138,12 +146,17 @@ target_link_libraries(test_tflite
         tensorflowlite
         tensorflowlite_gpu
         )
-set_target_properties(test_tflite PROPERTIES RUNTIME_OUTPUT_DIRECTORY
-        "${CMAKE_CURRENT_SOURCE_DIR}/build/outputs/bin/${CMAKE_BUILD_TYPE}")
+set_target_properties(
+        test_tflite PROPERTIES RUNTIME_OUTPUT_DIRECTORY
+        "${CMAKE_CURRENT_SOURCE_DIR}/build/outputs/bin/${CMAKE_BUILD_TYPE}"
+        )
 
-add_executable(test_v4l2
+add_executable(
+        test_v4l2
         src/main/cpp/test_v4l2_capture.cpp
         src/main/cpp/v4l2_capture.cpp
         )
-set_target_properties(test_v4l2 PROPERTIES RUNTIME_OUTPUT_DIRECTORY
-        "${CMAKE_CURRENT_SOURCE_DIR}/build/outputs/bin/${CMAKE_BUILD_TYPE}")
+set_target_properties(
+        test_v4l2 PROPERTIES RUNTIME_OUTPUT_DIRECTORY
+        "${CMAKE_CURRENT_SOURCE_DIR}/build/outputs/bin/${CMAKE_BUILD_TYPE}"
+        )

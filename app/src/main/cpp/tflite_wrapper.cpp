@@ -21,6 +21,12 @@ TfLiteWrapper::~TfLiteWrapper() {
 //    kTfLiteInt8 = 9,
 //    kTfLiteFloat16 = 10,
 //    kTfLiteFloat64 = 11,
+//    kTfLiteComplex128 = 12,
+//    kTfLiteUInt64 = 13,
+//    kTfLiteResource = 14,
+//    kTfLiteVariant = 15,
+//    kTfLiteUInt32 = 16,
+//    kTfLiteUInt16 = 17,
 //} TfLiteType;
 static const char* types[] = {
     "kTfLiteNoType",
@@ -35,8 +41,13 @@ static const char* types[] = {
     "kTfLiteInt8",
     "kTfLiteFloat16",
     "kTfLiteFloat64",
+    "kTfLiteComplex128",
+    "kTfLiteUInt64",
+    "kTfLiteResource",
+    "kTfLiteVariant",
+    "kTfLiteUInt32",
+    "kTfLiteUInt16",
 };
-
 
 static void dumpTensor(const TfLiteTensor* tensor, const char* prefix = "") {
     std::string str = "tensor(type=";
@@ -89,10 +100,10 @@ bool TfLiteWrapper::load(const char* modelFile, int numThreads, bool useNNAPI, b
         TfLiteTensor* tensor = TfLiteInterpreterGetInputTensor(mInterpreter, i);
         dumpTensor(tensor, "input:  ");
     }
-    int output_count = TfLiteInterpreterGetInputTensorCount(mInterpreter);
+    int output_count = TfLiteInterpreterGetOutputTensorCount(mInterpreter);
     for (int i=0; i < output_count; ++i) {
         const TfLiteTensor* tensor = TfLiteInterpreterGetOutputTensor(mInterpreter, i);
-        dumpTensor(TfLiteInterpreterGetOutputTensor(mInterpreter, i), "output: ");
+        dumpTensor(tensor, "output: ");
     }
     return true;
 }

@@ -9,15 +9,13 @@
 #include <opencv2/imgcodecs.hpp>
 #include <opencv2/imgproc.hpp>
 #include "tflite_wrapper.h"
-#include "../../../../../opencv-4.3.0-android-sdk/sdk/native/jni/include/opencv2/core/mat.hpp"
-#include "../../../../../opencv-4.3.0-android-sdk/sdk/native/jni/include/opencv2/core/types.hpp"
 
 using namespace std;
 using namespace cv;
 
 namespace {
     void showUsage(const char* app) {
-        LOGE("Usage: %s -m <model-file>  [-d <data-dir>] [-t <thread-num>] [-r <repeated-times>] [-n] [-g] [-f <gpu-flags>]\n"
+        LOGE("Usage: %s -m <model-file>  [-d <data-dir>] [-t <thread-num>] [-r <repeated-times>] [-n] [-g [-f <gpu-flags>]]\n"
              "       wherein:\n"
              "           -n  use NNAPI\n"
              "           -g  use GPU\n"
